@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react';
 import './App.css';
+import CustomColorPicker from './CustomColorPicker';
 import {
   generateWave,
   generateBlob,
@@ -92,6 +93,8 @@ const defaultSettings = {
 function App() {
   const [selectedPattern, setSelectedPattern] = useState('wave');
   const [settings, setSettings] = useState(defaultSettings);
+  const [backgroundColor, setBackgroundColor] = useState('002233');
+  const [fillColor, setFillColor] = useState('0066FF');
   const svgRef = useRef(null);
 
   const currentSettings = settings[selectedPattern];
@@ -107,26 +110,43 @@ function App() {
   };
 
   const generatePattern = () => {
-    const patternSettings = { ...currentSettings };
+    const patternSettings = { 
+      ...currentSettings,
+      color: `#${fillColor}`,
+      color1: `#${fillColor}`,
+      color2: `#${fillColor}`
+    };
     
+    let pattern = '';
     switch (selectedPattern) {
       case 'wave':
-        return generateWave(patternSettings);
+        pattern = generateWave(patternSettings);
+        break;
       case 'blob':
-        return generateBlob(patternSettings);
+        pattern = generateBlob(patternSettings);
+        break;
       case 'circleScatter':
-        return generateCircleScatter(patternSettings);
+        pattern = generateCircleScatter(patternSettings);
+        break;
       case 'layeredWaves':
-        return generateLayeredWaves(patternSettings);
+        pattern = generateLayeredWaves(patternSettings);
+        break;
       case 'stackedSteps':
-        return generateStackedSteps(patternSettings);
+        pattern = generateStackedSteps(patternSettings);
+        break;
       case 'islamicPattern':
-        return generateIslamicPattern(patternSettings);
+        pattern = generateIslamicPattern(patternSettings);
+        break;
       case 'floralPattern':
-        return generateFloralPattern(patternSettings);
+        pattern = generateFloralPattern(patternSettings);
+        break;
       default:
-        return '';
+        pattern = '';
     }
+    
+    // Add background rectangle
+    const background = `<rect width="100%" height="100%" fill="#${backgroundColor}"/>`;
+    return background + pattern;
   };
 
   const exportSVG = () => {
@@ -156,7 +176,7 @@ function App() {
     const url = URL.createObjectURL(blob);
     
     img.onload = () => {
-      ctx.fillStyle = 'white';
+      ctx.fillStyle = `#${backgroundColor}`;
       ctx.fillRect(0, 0, canvas.width, canvas.height);
       ctx.drawImage(img, 0, 0);
       
@@ -714,7 +734,23 @@ function App() {
         </div>
 
         <div className="panel-section">
-          <h2>Pattern Settings</h2>
+          <h2>Color</h2>
+          <div className="color-inputs">
+            <CustomColorPicker
+              label="Background"
+              color={backgroundColor}
+              onChange={setBackgroundColor}
+            />
+            <CustomColorPicker
+              label="Fill"
+              color={fillColor}
+              onChange={setFillColor}
+            />
+          </div>
+        </div>
+
+        <div className="panel-section">
+          <h2>Settings</h2>
           {renderControls()}
         </div>
 

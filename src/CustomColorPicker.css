@@ -1,0 +1,52 @@
+.color-picker-popup {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  z-index: 1000;
+  background: var(--blue-02);
+  border: 2px solid var(--blue-03);
+  border-radius: 8px;
+  padding: 16px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+
+/* Style the react-colorful picker */
+.color-picker-popup .react-colorful {
+  width: 200px;
+  height: 200px;
+}
+
+.color-picker-popup .react-colorful__saturation {
+  border-radius: 6px 6px 0 0;
+  border-bottom: none;
+}
+
+.color-picker-popup .react-colorful__hue {
+  height: 12px;
+  border-radius: 6px;
+  margin-top: 12px;
+}
+
+.color-picker-popup .react-colorful__pointer {
+  width: 20px;
+  height: 20px;
+  border: 3px solid #FFFFFF;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.color-picker-popup .react-colorful__hue .react-colorful__pointer {
+  width: 16px;
+  height: 16px;
+}
+
+/* Ensure swatch wrapper has proper positioning context */
+.color-swatch-wrapper {
+  position: relative;
+}
+
+/* Pointer cursor for clickable swatch */
+.color-preview-swatch {
+  cursor: pointer;
+  pointer-events: all;
+}
+

@@ -219,6 +219,43 @@
   background: rgba(255, 255, 255, 0.08);
 }
 
+.color-inputs {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.color-input-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.color-input-group .input-with-label {
+  flex: 1;
+}
+
+.color-swatch-wrapper {
+  position: relative;
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+}
+
+.color-preview-swatch {
+  width: 100%;
+  height: 100%;
+  border-radius: 8px;
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.color-swatch-wrapper:hover .color-preview-swatch {
+  border-color: rgba(255, 255, 255, 0.3);
+  transform: scale(1.05);
+}
+
 
 .size-inputs {
   display: grid;
