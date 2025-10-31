@@ -1,0 +1,51 @@
+/* GT Welsheim Pro Font - Add your font files to /public/fonts/ */
+@font-face {
+  font-family: 'GT Welsheim Pro';
+  src: url('/fonts/GTWelsheimPro-Regular.woff2') format('woff2'),
+       url('/fonts/GTWelsheimPro-Regular.woff') format('woff');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'GT Welsheim Pro';
+  src: url('/fonts/GTWelsheimPro-Medium.woff2') format('woff2'),
+       url('/fonts/GTWelsheimPro-Medium.woff') format('woff');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'GT Welsheim Pro';
+  src: url('/fonts/GTWelsheimPro-Bold.woff2') format('woff2'),
+       url('/fonts/GTWelsheimPro-Bold.woff') format('woff');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background: #080824;
+  color: #ffffff;
+  overflow: hidden;
+}
+
+#root {
+  width: 100vw;
+  height: 100vh;
+}
+
+
