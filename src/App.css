@@ -32,6 +32,12 @@
   position: relative;
 }
 
+.canvas-wrapper {
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+}
+
 .canvas-wrapper svg {
   display: block;
 }
@@ -41,34 +47,49 @@
   background: var(--bg);
   backdrop-filter: blur(10px);
   border-left: 1px solid rgba(255, 255, 255, 0.1);
-  padding: 30px;
-  overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 30px;
+  overflow: hidden;
 }
 
-.side-panel::-webkit-scrollbar {
+.panel-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 30px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.panel-content::-webkit-scrollbar {
   width: 8px;
 }
 
-.side-panel::-webkit-scrollbar-track {
+.panel-content::-webkit-scrollbar-track {
   background: rgba(255, 255, 255, 0.05);
 }
 
-.side-panel::-webkit-scrollbar-thumb {
+.panel-content::-webkit-scrollbar-thumb {
   background: rgba(255, 255, 255, 0.2);
   border-radius: 4px;
 }
 
-.side-panel::-webkit-scrollbar-thumb:hover {
+.panel-content::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.3);
+}
+
+.panel-footer {
+  flex-shrink: 0;
+  padding: 30px;
+  border-top: 1px solid rgba(255, 255, 255, 0.2);
+  background: var(--blue-01);
 }
 
 .panel-section {
   display: flex;
   flex-direction: column;
   gap: 15px;
+  margin-top: 24px;
   padding-top: 24px;
   border-top: 1px solid rgba(255, 255, 255, 0.1);
   margin-left: -30px;
@@ -77,9 +98,18 @@
   padding-right: 30px;
 }
 
-.panel-section:first-child {
+.panel-content .panel-section:first-child {
   border-top: none;
   padding-top: 0;
+  margin-top: 0;
+}
+
+.panel-footer .panel-section {
+  border-top: none;
+  padding-top: 0;
+  margin: 0;
+  padding-left: 0;
+  padding-right: 0;
 }
 
 .panel-section h2 {
@@ -95,6 +125,12 @@
 .pattern-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+.layers-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
   gap: 10px;
 }
 
@@ -337,11 +373,12 @@
 
 .export-buttons {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   gap: 10px;
 }
 
 .export-button {
+  flex: 1;
   padding: 14px 20px;
   background: var(--gradient);
   border: none;
@@ -363,6 +400,14 @@
 
 .export-button:active {
   transform: translateY(0);
+}
+
+.export-button-secondary {
+  background: var(--blue-03);
+}
+
+.export-button-secondary:hover {
+  box-shadow: 0 6px 20px rgba(70, 70, 106, 0.5);
 }
 
 .color-grid {

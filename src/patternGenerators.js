@@ -1,12 +1,12 @@
 // Wave Pattern Generator
 export const generateWave = (settings) => {
-  const { width, height, amplitude, frequency, strokeWidth, color, opacity, layers } = settings;
+  const { width, height, amplitude, frequency, strokeWidth, color, opacity, layers, verticalOffset = 0 } = settings;
   let paths = '';
   
   for (let layer = 0; layer < layers; layer++) {
     const layerAmplitude = amplitude * (1 - layer * 0.2);
     const layerFrequency = frequency * (1 + layer * 0.3);
-    const yOffset = (height / 2) + (layer * 30);
+    const yOffset = (height / 2) + (layer * 30) + verticalOffset;
     
     let path = `M 0 ${yOffset}`;
     for (let x = 0; x <= width; x += 5) {
