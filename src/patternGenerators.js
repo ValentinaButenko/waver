@@ -7,50 +7,94 @@ export const generateWave = (settings, phaseOffsets = []) => {
   
   // Use custom path if provided, otherwise generate default
   if (customPath && customPath.length > 5) {
-    // First, apply heavy smoothing to the custom path
-    const smoothedPath = [];
-    const smoothingWindow = Math.min(10, Math.floor(customPath.length / 10));
+    // MULTI-PASS SMOOTHING for ultra-smooth custom paths
+    let smoothedPath = [...customPath];
     
-    for (let i = 0; i < customPath.length; i++) {
-      let sumX = 0, sumY = 0, count = 0;
+    // First pass: Apply aggressive Gaussian smoothing
+    const smoothingPasses = 3;
+    for (let pass = 0; pass < smoothingPasses; pass++) {
+      const tempPath = [];
+      const smoothingWindow = Math.min(15, Math.floor(smoothedPath.length / 8));
       
-      // Gaussian-like weighted average
-      for (let j = -smoothingWindow; j <= smoothingWindow; j++) {
-        const idx = i + j;
-        if (idx >= 0 && idx < customPath.length) {
-          const weight = Math.exp(-(j * j) / (2 * smoothingWindow * smoothingWindow));
-          sumX += customPath[idx].x * weight;
-          sumY += customPath[idx].y * weight;
-          count += weight;
+      for (let i = 0; i < smoothedPath.length; i++) {
+        let sumX = 0, sumY = 0, totalWeight = 0;
+        
+        // Gaussian kernel with wider window for smoother results
+        for (let j = -smoothingWindow; j <= smoothingWindow; j++) {
+          const idx = i + j;
+          if (idx >= 0 && idx < smoothedPath.length) {
+            const sigma = smoothingWindow / 2.5;
+            const weight = Math.exp(-(j * j) / (2 * sigma * sigma));
+            sumX += smoothedPath[idx].x * weight;
+            sumY += smoothedPath[idx].y * weight;
+            totalWeight += weight;
+          }
         }
+        
+        tempPath.push({ x: sumX / totalWeight, y: sumY / totalWeight });
       }
-      
-      smoothedPath.push({ x: sumX / count, y: sumY / count });
+      smoothedPath = tempPath;
     }
     
-    // Resample smoothed path to have consistent number of points
+    // Second pass: Resample using Catmull-Rom spline interpolation
     const numPoints = 800;
+    const resampledPath = [];
+    
     for (let i = 0; i < numPoints; i++) {
       const t = i / (numPoints - 1);
       const index = t * (smoothedPath.length - 1);
-      const floorIndex = Math.floor(index);
-      const ceilIndex = Math.min(Math.ceil(index), smoothedPath.length - 1);
-      const fraction = index - floorIndex;
+      const i1 = Math.floor(index);
+      const i2 = Math.min(i1 + 1, smoothedPath.length - 1);
+      const fraction = index - i1;
       
-      // Interpolate between points
-      const x = smoothedPath[floorIndex].x + (smoothedPath[ceilIndex].x - smoothedPath[floorIndex].x) * fraction;
-      const y = smoothedPath[floorIndex].y + (smoothedPath[ceilIndex].y - smoothedPath[floorIndex].y) * fraction;
+      // Get surrounding points for Catmull-Rom interpolation
+      const i0 = Math.max(0, i1 - 1);
+      const i3 = Math.min(smoothedPath.length - 1, i2 + 1);
       
-      // Calculate spread based on curvature
+      const p0 = smoothedPath[i0];
+      const p1 = smoothedPath[i1];
+      const p2 = smoothedPath[i2];
+      const p3 = smoothedPath[i3];
+      
+      // Catmull-Rom spline interpolation (tension = 0.5 for maximum smoothness)
+      const t2 = fraction * fraction;
+      const t3 = t2 * fraction;
+      
+      const x = 0.5 * (
+        (2 * p1.x) +
+        (-p0.x + p2.x) * fraction +
+        (2 * p0.x - 5 * p1.x + 4 * p2.x - p3.x) * t2 +
+        (-p0.x + 3 * p1.x - 3 * p2.x + p3.x) * t3
+      );
+      
+      const y = 0.5 * (
+        (2 * p1.y) +
+        (-p0.y + p2.y) * fraction +
+        (2 * p0.y - 5 * p1.y + 4 * p2.y - p3.y) * t2 +
+        (-p0.y + 3 * p1.y - 3 * p2.y + p3.y) * t3
+      );
+      
+      resampledPath.push({ x, y });
+    }
+    
+    // Third pass: Calculate smooth spread factor based on curvature
+    for (let i = 0; i < resampledPath.length; i++) {
+      const point = resampledPath[i];
+      
+      // Calculate curvature using surrounding points
       let spreadFactor = 1.0;
-      if (floorIndex > 0 && ceilIndex < smoothedPath.length - 1) {
-        const dx = Math.abs(smoothedPath[ceilIndex].x - smoothedPath[floorIndex - 1].x);
-        const dy = Math.abs(smoothedPath[ceilIndex].y - smoothedPath[floorIndex - 1].y);
-        const curvature = Math.sqrt(dx * dx + dy * dy);
-        spreadFactor = 0.3 + Math.min(curvature / 50, 2.0);
+      if (i > 5 && i < resampledPath.length - 5) {
+        const prev = resampledPath[i - 5];
+        const next = resampledPath[i + 5];
+        const dx = next.x - prev.x;
+        const dy = next.y - prev.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        
+        // More gradual spread based on path straightness
+        spreadFactor = 0.5 + Math.min(distance / 100, 1.5);
       }
       
-      rawPoints.push({ x, y, spread: spreadFactor });
+      rawPoints.push({ x: point.x, y: point.y, spread: spreadFactor });
     }
   } else {
     // Generate core path points - ULTRA HIGH density for perfect smoothness
