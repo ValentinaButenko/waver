@@ -13,7 +13,8 @@ const defaultSettings = {
     color: '#000000',
     opacity: 1.0,
     layers: 25,
-    verticalOffset: 0
+    verticalOffset: 0,
+    patternHeight: 1040  // Reference height for pattern generation
   }
 };
 

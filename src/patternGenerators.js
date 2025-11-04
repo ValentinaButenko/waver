@@ -57,10 +57,13 @@ export const generateWave = (settings, phaseOffsets = []) => {
     const numPoints = 800;
     const centerX = width / 2;
     
-    // Generate raw points
+    // Use patternHeight for consistent generation, or fall back to height
+    const patternHeight = settings.patternHeight || height;
+    
+    // Generate raw points based on patternHeight (not canvas height)
     for (let i = 0; i < numPoints; i++) {
       const t = i / (numPoints - 1);
-      const y = t * height + verticalOffset;
+      const y = t * patternHeight + verticalOffset;
       
       // Create flowing X movement
       const x = centerX + Math.sin(t * Math.PI * frequency * 2) * amplitude * Math.sin(t * Math.PI * 1.5);
