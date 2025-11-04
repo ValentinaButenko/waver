@@ -66,8 +66,10 @@ function App() {
       setIsDrawing(true);
       setCustomPath([]);
       const rect = canvasRef.current.getBoundingClientRect();
-      const x = e.clientX - rect.left;
-      const y = e.clientY - rect.top;
+      const scaleX = currentSettings.width / rect.width;
+      const scaleY = currentSettings.height / rect.height;
+      const x = (e.clientX - rect.left) * scaleX;
+      const y = (e.clientY - rect.top) * scaleY;
       setCustomPath([{ x, y }]);
     } else {
       setIsDragging(true);
@@ -80,8 +82,10 @@ function App() {
   const handleMouseMove = (e) => {
     if (isDrawingMode && isDrawing) {
       const rect = canvasRef.current.getBoundingClientRect();
-      const x = e.clientX - rect.left;
-      const y = e.clientY - rect.top;
+      const scaleX = currentSettings.width / rect.width;
+      const scaleY = currentSettings.height / rect.height;
+      const x = (e.clientX - rect.left) * scaleX;
+      const y = (e.clientY - rect.top) * scaleY;
       
       // Only add point if it's far enough from the last point (reduces jitter)
       setCustomPath(prev => {
@@ -302,9 +306,9 @@ function App() {
         <div className="app-header">
           <h1>WAVER</h1>
         </div>
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '20px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '20px', maxWidth: '100%', maxHeight: '100%' }}>
           <div 
-            className="canvas-wrapper"
+            className="canvas-wrapper-scaled"
             ref={canvasRef}
             onMouseDown={handleMouseDown}
             onMouseMove={handleMouseMove}
@@ -312,7 +316,11 @@ function App() {
             onMouseLeave={handleMouseUp}
             style={{ 
               cursor: isDrawingMode ? 'crosshair' : (isDragging ? 'grabbing' : 'grab'),
-              position: 'relative'
+              position: 'relative',
+              maxWidth: 'calc(100vw - 360px - 120px)',
+              maxHeight: 'calc(100vh - 180px)',
+              width: currentSettings.width,
+              height: currentSettings.height
             }}
           >
             <svg
@@ -331,12 +339,13 @@ function App() {
             </svg>
             {isDrawingMode && customPath.length > 0 && showDrawnLine && (
               <svg
+                viewBox={`0 0 ${currentSettings.width} ${currentSettings.height}`}
                 style={{
                   position: 'absolute',
                   top: 0,
                   left: 0,
-                  width: currentSettings.width,
-                  height: currentSettings.height,
+                  width: '100%',
+                  height: '100%',
                   pointerEvents: 'none',
                   zIndex: 10
                 }}
