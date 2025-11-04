@@ -331,9 +331,6 @@ function App() {
   return (
     <div className="app">
       <div className="canvas-container">
-        <div className="app-header">
-          <h1>WAVER</h1>
-        </div>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '20px', maxWidth: '100%', maxHeight: '100%' }}>
           <div 
             className="canvas-wrapper-scaled"
