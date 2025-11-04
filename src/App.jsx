@@ -315,19 +315,20 @@ function App() {
             onMouseLeave={handleMouseUp}
             style={{ 
               cursor: isDrawingMode ? 'crosshair' : (isDragging ? 'grabbing' : 'grab'),
-              position: 'relative',
-              transform: `rotate(${rotation}deg)`,
-              transition: 'transform 0.3s ease'
+              position: 'relative'
             }}
           >
             <svg
-              key={`wave-${currentSettings.layers}`}
+              key={`wave-${currentSettings.layers}-${rotation}`}
               ref={svgRef}
               width={currentSettings.width}
               height={currentSettings.height}
               xmlns="http://www.w3.org/2000/svg"
-              dangerouslySetInnerHTML={{ __html: generatePattern() }}
-            />
+            >
+              <g transform={`rotate(${rotation} ${currentSettings.width / 2} ${currentSettings.height / 2})`} style={{ transition: 'transform 0.3s ease' }}>
+                <g dangerouslySetInnerHTML={{ __html: generatePattern() }} />
+              </g>
+            </svg>
             {isDrawingMode && customPath.length > 0 && showDrawnLine && (
               <svg
                 style={{
