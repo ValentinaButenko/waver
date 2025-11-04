@@ -14,8 +14,7 @@ const defaultSettings = {
     opacity: 1.0,
     layers: 25,
     verticalOffset: 0,
-    horizontalOffset: 0,
-    patternWidth: 1280  // Reference width for pattern generation (horizontal flow)
+    horizontalOffset: 0
   }
 };
 

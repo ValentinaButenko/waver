@@ -57,15 +57,13 @@ export const generateWave = (settings, phaseOffsets = []) => {
     const numPoints = 800;
     const centerY = height / 2;
     
-    // Use patternWidth for consistent generation, or fall back to width
-    const patternWidth = settings.patternWidth || width;
-    
+    // Pattern always spans the full canvas width
     // Generate raw points for HORIZONTAL flow (left to right)
     for (let i = 0; i < numPoints; i++) {
       const t = i / (numPoints - 1);
-      const x = t * patternWidth + horizontalOffset;
+      const x = t * width;
       
-      // Create flowing Y movement (verticalOffset applied later to all points)
+      // Create flowing Y movement
       const y = centerY + Math.sin(t * Math.PI * frequency * 2) * amplitude * Math.sin(t * Math.PI * 1.5);
       
       // DRAMATIC spread factor - this controls how much lines spread apart or compress
@@ -201,7 +199,7 @@ export const generateWave = (settings, phaseOffsets = []) => {
       const offsetDistance = distanceFromCore * dynamicSpacing * taperFactor;
       
       // Calculate final position with offsets
-      const x = point.x + perpX * offsetDistance;
+      const x = point.x + perpX * offsetDistance + horizontalOffset;
       const y = point.y + perpY * offsetDistance + verticalOffset;
       
       layerPoints.push({ x, y });
