@@ -23,8 +23,8 @@ const defaultSettings = {
 function App() {
   const [selectedPattern, setSelectedPattern] = useState('wave');
   const [settings, setSettings] = useState(defaultSettings);
-  const [backgroundColor, setBackgroundColor] = useState('F5F5F0');
-  const [fillColor, setFillColor] = useState('000000');
+  const [backgroundColor, setBackgroundColor] = useState('161616');
+  const [fillColor, setFillColor] = useState('4300B0');
   const [isDragging, setIsDragging] = useState(false);
   const [dragStartX, setDragStartX] = useState(0);
   const [dragStartY, setDragStartY] = useState(0);
@@ -42,6 +42,8 @@ function App() {
   const [hasDrawnInCurrentSession, setHasDrawnInCurrentSession] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [draggingNodeIndex, setDraggingNodeIndex] = useState(null);
+  const [generationModeOffsets, setGenerationModeOffsets] = useState({ vertical: 0, horizontal: 0 });
+  const [drawingModeOffsets, setDrawingModeOffsets] = useState({ vertical: 0, horizontal: 0 });
   const svgRef = useRef(null);
   const canvasRef = useRef(null);
 
@@ -102,8 +104,8 @@ function App() {
       // Check if clicking on a node (account for offsets)
       const nodeRadius = 10;
       const clickedNodeIndex = customPath.findIndex((point) => {
-        const offsetX = point.x + (currentSettings.horizontalOffset || 0);
-        const offsetY = point.y + (currentSettings.verticalOffset || 0);
+        const offsetX = point.x + drawingModeOffsets.horizontal;
+        const offsetY = point.y + drawingModeOffsets.vertical;
         const dx = offsetX - transformedX;
         const dy = offsetY - transformedY;
         const distance = Math.sqrt(dx * dx + dy * dy);
@@ -118,8 +120,8 @@ function App() {
         setIsDragging(true);
         setDragStartX(e.clientX);
         setDragStartY(e.clientY);
-        setInitialVerticalOffset(currentSettings.verticalOffset || 0);
-        setInitialHorizontalOffset(currentSettings.horizontalOffset || 0);
+        setInitialVerticalOffset(drawingModeOffsets.vertical);
+        setInitialHorizontalOffset(drawingModeOffsets.horizontal);
       }
     } else if (isDrawingMode && !isEditMode && customPath.length === 0) {
       // First time drawing or no existing path
@@ -135,15 +137,15 @@ function App() {
       setIsDragging(true);
       setDragStartX(e.clientX);
       setDragStartY(e.clientY);
-      setInitialVerticalOffset(currentSettings.verticalOffset || 0);
-      setInitialHorizontalOffset(currentSettings.horizontalOffset || 0);
+      setInitialVerticalOffset(drawingModeOffsets.vertical);
+      setInitialHorizontalOffset(drawingModeOffsets.horizontal);
     } else if (!isDrawingMode) {
       // Generation mode - allow dragging
       setIsDragging(true);
       setDragStartX(e.clientX);
       setDragStartY(e.clientY);
-      setInitialVerticalOffset(currentSettings.verticalOffset || 0);
-      setInitialHorizontalOffset(currentSettings.horizontalOffset || 0);
+      setInitialVerticalOffset(generationModeOffsets.vertical);
+      setInitialHorizontalOffset(generationModeOffsets.horizontal);
     }
     e.preventDefault();
   };
@@ -181,8 +183,8 @@ function App() {
       setCustomPath(prev => {
         const newPath = [...prev];
         newPath[draggingNodeIndex] = { 
-          x: transformedX - (currentSettings.horizontalOffset || 0), 
-          y: transformedY - (currentSettings.verticalOffset || 0) 
+          x: transformedX - drawingModeOffsets.horizontal, 
+          y: transformedY - drawingModeOffsets.vertical 
         };
         return newPath;
       });
@@ -228,15 +230,18 @@ function App() {
       const newVerticalOffset = initialVerticalOffset + deltaY;
       const newHorizontalOffset = initialHorizontalOffset + deltaX;
       
-      // Update both offsets at once
-      setSettings(prev => ({
-        ...prev,
-        [selectedPattern]: {
-          ...prev[selectedPattern],
-          verticalOffset: newVerticalOffset,
-          horizontalOffset: newHorizontalOffset
-        }
-      }));
+      // Update the appropriate offset state based on current mode
+      if (isDrawingMode) {
+        setDrawingModeOffsets({
+          vertical: newVerticalOffset,
+          horizontal: newHorizontalOffset
+        });
+      } else {
+        setGenerationModeOffsets({
+          vertical: newVerticalOffset,
+          horizontal: newHorizontalOffset
+        });
+      }
     }
   };
 
@@ -321,8 +326,13 @@ function App() {
       return '';
     }
     
+    // Use the appropriate offsets based on current mode
+    const currentOffsets = isDrawingMode ? drawingModeOffsets : generationModeOffsets;
+    
     const patternSettings = { 
       ...currentSettings,
+      verticalOffset: currentOffsets.vertical,
+      horizontalOffset: currentOffsets.horizontal,
       color: `#${fillColor}`,
       customPath: useCustomPath ? customPath : null
     };
@@ -383,9 +393,14 @@ function App() {
     return (
       <>
         <div className="control-group">
-          <label>Layers: {currentSettings.layers}</label>
+          <label>Layers</label>
           <div className="slider-container">
-            <div className="slider-icon"></div>
+            <div className="slider-icon">
+              <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M16.5 51C16.5 51 29.1998 59 38.25 59C47.3002 59 52 55.5 60 51C68 46.5 72.6998 43 81.75 43C90.8002 43 103.5 51 103.5 51" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="3" strokeLinecap="round"/>
+                <path d="M16 68C16 68 28.6998 76 37.75 76C46.8002 76 51.5 72.5 59.5 68C67.5 63.5 72.1998 60 81.25 60C90.3002 60 103 68 103 68" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="3" strokeLinecap="round"/>
+              </svg>
+            </div>
             <input
               type="range"
               min="5"
@@ -394,11 +409,20 @@ function App() {
               value={currentSettings.layers}
               onChange={(e) => updateSetting('layers', e.target.value)}
             />
-            <div className="slider-icon"></div>
+            <div className="slider-icon">
+              <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M16.5 43C16.5 43 29.1998 51 38.25 51C47.3002 51 52 47.5 60 43C68 38.5 72.6998 35 81.75 35C90.8002 35 103.5 43 103.5 43" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="3" strokeLinecap="round"/>
+                <path d="M16.5 32C16.5 32 29.1998 40 38.25 40C47.3002 40 52 36.5 60 32C68 27.5 72.6998 24 81.75 24C90.8002 24 103.5 32 103.5 32" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="3" strokeLinecap="round"/>
+                <path d="M16.5 54C16.5 54 29.1998 62 38.25 62C47.3002 62 52 58.5 60 54C68 49.5 72.6998 46 81.75 46C90.8002 46 103.5 54 103.5 54" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="3" strokeLinecap="round"/>
+                <path d="M16.5 76C16.5 76 29.1998 84 38.25 84C47.3002 84 52 80.5 60 76C68 71.5 72.6998 68 81.75 68C90.8002 68 103.5 76 103.5 76" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="3" strokeLinecap="round"/>
+                <path d="M16.5 87C16.5 87 29.1998 95 38.25 95C47.3002 95 52 91.5 60 87C68 82.5 72.6998 79 81.75 79C90.8002 79 103.5 87 103.5 87" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="3" strokeLinecap="round"/>
+                <path d="M16 65C16 65 28.6998 73 37.75 73C46.8002 73 51.5 69.5 59.5 65C67.5 60.5 72.1998 57 81.25 57C90.3002 57 103 65 103 65" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="3" strokeLinecap="round"/>
+              </svg>
+            </div>
           </div>
         </div>
         <div className="control-group">
-          <label>Amplitude: {currentSettings.amplitude}</label>
+          <label>Amplitude</label>
           <div className="slider-container">
             <div className="slider-icon">
               <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -421,7 +445,7 @@ function App() {
           </div>
         </div>
         <div className="control-group">
-          <label>Frequency: {currentSettings.frequency}</label>
+          <label>Frequency</label>
           <div className="slider-container">
             <div className="slider-icon">
               <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -444,7 +468,7 @@ function App() {
           </div>
         </div>
         <div className="control-group">
-          <label>Width: {currentSettings.strokeWidth}</label>
+          <label>Width</label>
           <div className="slider-container">
             <div className="slider-icon">
               <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -522,7 +546,7 @@ function App() {
               >
                 <g transform={`translate(${currentSettings.width / 2} ${currentSettings.height / 2}) scale(${patternScale}) rotate(${rotation}) translate(${-currentSettings.width / 2} ${-currentSettings.height / 2})`}>
                   <path
-                    d={`M ${customPath.map(p => `${p.x + (currentSettings.horizontalOffset || 0)} ${p.y + (currentSettings.verticalOffset || 0)}`).join(' L ')}`}
+                    d={`M ${customPath.map(p => `${p.x + drawingModeOffsets.horizontal} ${p.y + drawingModeOffsets.vertical}`).join(' L ')}`}
                     stroke="#FF0000"
                     strokeWidth="3"
                     fill="none"
@@ -549,8 +573,8 @@ function App() {
                   {customPath.map((point, index) => (
                     <circle
                       key={index}
-                      cx={point.x + (currentSettings.horizontalOffset || 0)}
-                      cy={point.y + (currentSettings.verticalOffset || 0)}
+                      cx={point.x + drawingModeOffsets.horizontal}
+                      cy={point.y + drawingModeOffsets.vertical}
                       r={6 / patternScale}
                       fill="#4DFFDF"
                       stroke="#FFFFFF"
