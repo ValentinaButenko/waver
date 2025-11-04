@@ -1,8 +1,9 @@
 import { useState, useRef, useEffect } from 'react';
 import { HexColorPicker } from 'react-colorful';
+import { Eye, EyeClosed } from 'phosphor-react';
 import './CustomColorPicker.css';
 
-const CustomColorPicker = ({ color, onChange, label }) => {
+const CustomColorPicker = ({ color, onChange, label, showEyeToggle, isVisible, onToggleVisibility }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [inputValue, setInputValue] = useState(color);
   const pickerRef = useRef(null);
@@ -74,6 +75,16 @@ const CustomColorPicker = ({ color, onChange, label }) => {
             style={{ textTransform: 'uppercase' }}
           />
         </div>
+        
+        {showEyeToggle && (
+          <div className="eye-toggle-icon" onClick={onToggleVisibility}>
+            {isVisible ? (
+              <Eye size={20} weight="regular" />
+            ) : (
+              <EyeClosed size={20} weight="regular" />
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

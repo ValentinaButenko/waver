@@ -50,3 +50,17 @@
   pointer-events: all;
 }
 
+/* Eye toggle icon */
+.eye-toggle-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: rgba(255, 255, 255, 0.7);
+  transition: color 0.2s ease;
+  padding: 0 8px;
+}
+
+.eye-toggle-icon:hover {
+  color: rgba(255, 255, 255, 1);
+}

@@ -1,25 +1,7 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import './App.css';
 import CustomColorPicker from './CustomColorPicker';
-import {
-  generateWave,
-  generateBlob,
-  generateCircleScatter,
-  generateLayeredWaves,
-  generateStackedSteps,
-  generateIslamicPattern,
-  generateFloralPattern
-} from './patternGenerators';
-
-const patternTypes = [
-  { id: 'wave', name: 'Wave' },
-  { id: 'blob', name: 'Blob' },
-  { id: 'circleScatter', name: 'Circle scatter' },
-  { id: 'layeredWaves', name: 'Layered waves' },
-  { id: 'stackedSteps', name: 'Stacked steps' },
-  { id: 'islamicPattern', name: 'Islamic pattern' },
-  { id: 'floralPattern', name: 'Floral pattern' }
-];
+import { generateWave } from './patternGenerators';
 
 const defaultSettings = {
   wave: {
@@ -32,62 +14,6 @@ const defaultSettings = {
     opacity: 0.8,
     layers: 5,
     verticalOffset: 0
-  },
-  blob: {
-    width: 1280,
-    height: 1040,
-    blobCount: 15,
-    size: 80,
-    color: '#667eea',
-    opacity: 0.6,
-    complexity: 8
-  },
-  circleScatter: {
-    width: 1280,
-    height: 1040,
-    circleCount: 50,
-    minRadius: 10,
-    maxRadius: 60,
-    color: '#667eea',
-    opacity: 0.5,
-    strokeWidth: 2
-  },
-  layeredWaves: {
-    width: 1280,
-    height: 1040,
-    layers: 8,
-    amplitude: 60,
-    frequency: 3,
-    color1: '#667eea',
-    color2: '#764ba2',
-    opacity: 0.7
-  },
-  stackedSteps: {
-    width: 1280,
-    height: 1040,
-    steps: 8,
-    stepHeight: 80,
-    color: '#667eea',
-    opacity: 0.8,
-    spacing: 20
-  },
-  islamicPattern: {
-    width: 1280,
-    height: 1040,
-    gridSize: 8,
-    color: '#667eea',
-    strokeWidth: 2,
-    opacity: 0.8,
-    complexity: 8
-  },
-  floralPattern: {
-    width: 1280,
-    height: 1040,
-    flowerCount: 20,
-    petalCount: 6,
-    size: 40,
-    color: '#667eea',
-    opacity: 0.7
   }
 };
 
@@ -99,9 +25,24 @@ function App() {
   const [isDragging, setIsDragging] = useState(false);
   const [dragStartY, setDragStartY] = useState(0);
   const [initialOffset, setInitialOffset] = useState(0);
+  const [includeBackground, setIncludeBackground] = useState(true);
+  const [wavePhaseOffsets, setWavePhaseOffsets] = useState([]);
   const svgRef = useRef(null);
 
   const currentSettings = settings[selectedPattern];
+
+  // Generate phase offsets when wave settings change (but not when just dragging)
+  useEffect(() => {
+    const layers = currentSettings.layers || 5;
+    const newPhaseOffsets = Array.from({ length: layers }, () => Math.random() * Math.PI * 2);
+    setWavePhaseOffsets(newPhaseOffsets);
+  }, [
+    currentSettings.amplitude,
+    currentSettings.frequency,
+    currentSettings.strokeWidth,
+    currentSettings.layers
+    // Note: verticalOffset is NOT in the dependency array
+  ]);
 
   const updateSetting = (key, value) => {
     setSettings(prev => ({
@@ -114,16 +55,14 @@ function App() {
   };
 
   const handleMouseDown = (e) => {
-    if (selectedPattern === 'wave') {
-      setIsDragging(true);
-      setDragStartY(e.clientY);
-      setInitialOffset(currentSettings.verticalOffset || 0);
-      e.preventDefault();
-    }
+    setIsDragging(true);
+    setDragStartY(e.clientY);
+    setInitialOffset(currentSettings.verticalOffset || 0);
+    e.preventDefault();
   };
 
   const handleMouseMove = (e) => {
-    if (isDragging && selectedPattern === 'wave') {
+    if (isDragging) {
       const deltaY = e.clientY - dragStartY;
       const newOffset = initialOffset + deltaY;
       updateSetting('verticalOffset', newOffset);
@@ -137,40 +76,13 @@ function App() {
   const generatePattern = () => {
     const patternSettings = { 
       ...currentSettings,
-      color: `#${fillColor}`,
-      color1: `#${fillColor}`,
-      color2: `#${fillColor}`
+      color: `#${fillColor}`
     };
     
-    let pattern = '';
-    switch (selectedPattern) {
-      case 'wave':
-        pattern = generateWave(patternSettings);
-        break;
-      case 'blob':
-        pattern = generateBlob(patternSettings);
-        break;
-      case 'circleScatter':
-        pattern = generateCircleScatter(patternSettings);
-        break;
-      case 'layeredWaves':
-        pattern = generateLayeredWaves(patternSettings);
-        break;
-      case 'stackedSteps':
-        pattern = generateStackedSteps(patternSettings);
-        break;
-      case 'islamicPattern':
-        pattern = generateIslamicPattern(patternSettings);
-        break;
-      case 'floralPattern':
-        pattern = generateFloralPattern(patternSettings);
-        break;
-      default:
-        pattern = '';
-    }
+    const pattern = generateWave(patternSettings, wavePhaseOffsets);
     
-    // Add background rectangle
-    const background = `<rect width="100%" height="100%" fill="#${backgroundColor}"/>`;
+    // Add background rectangle if enabled
+    const background = includeBackground ? `<rect width="100%" height="100%" fill="#${backgroundColor}"/>` : '';
     return background + pattern;
   };
 
@@ -201,8 +113,10 @@ function App() {
     const url = URL.createObjectURL(blob);
     
     img.onload = () => {
-      ctx.fillStyle = `#${backgroundColor}`;
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      if (includeBackground) {
+        ctx.fillStyle = `#${backgroundColor}`;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+      }
       ctx.drawImage(img, 0, 0);
       
       canvas.toBlob((blob) => {
@@ -220,490 +134,91 @@ function App() {
   };
 
   const renderControls = () => {
-    switch (selectedPattern) {
-      case 'wave':
-        return (
-          <>
-            <div className="control-group">
-              <label>Layers</label>
-              <div className="layers-grid">
-                {[1, 2, 3, 4, 5].map(layerNum => (
-                  <button
-                    key={layerNum}
-                    className={`pattern-button ${currentSettings.layers === layerNum ? 'active' : ''}`}
-                    onClick={() => updateSetting('layers', layerNum)}
-                  >
-                    {layerNum}
-                  </button>
-                ))}
-              </div>
+    return (
+      <>
+        <div className="control-group">
+          <label>Layers</label>
+          <div className="layers-grid">
+            {[1, 2, 3, 4, 5].map(layerNum => (
+              <button
+                key={layerNum}
+                className={`pattern-button ${currentSettings.layers === layerNum ? 'active' : ''}`}
+                onClick={() => updateSetting('layers', layerNum)}
+              >
+                {layerNum}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="control-group">
+          <label>Amplitude</label>
+          <div className="slider-container">
+            <div className="slider-icon">
+              <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M16.5 60C16.5 60 29.1998 68 38.25 68C47.3002 68 52 64.5 60 60C68 55.5 72.6998 52 81.75 52C90.8002 52 103.5 60 103.5 60" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="5" strokeLinecap="round"/>
+              </svg>
             </div>
-            <div className="control-group">
-              <label>Amplitude</label>
-              <div className="slider-container">
-                <div className="slider-icon">
-                  <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M16.5 60C16.5 60 29.1998 68 38.25 68C47.3002 68 52 64.5 60 60C68 55.5 72.6998 52 81.75 52C90.8002 52 103.5 60 103.5 60" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="5" strokeLinecap="round"/>
-                  </svg>
-                </div>
-                <input
-                  type="range"
-                  min="20"
-                  max="120"
-                  value={currentSettings.amplitude}
-                  onChange={(e) => updateSetting('amplitude', e.target.value)}
-                />
-                <div className="slider-icon">
-                  <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M16.5 60C16.5 60 27.5 92 38.25 92C49 92 56.5 70 60 60C63.5 50 71.5 28 81.75 28C92 28 103.5 60 103.5 60" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="5" strokeLinecap="round"/>
-                  </svg>
-                </div>
-              </div>
+            <input
+              type="range"
+              min="20"
+              max="120"
+              value={currentSettings.amplitude}
+              onChange={(e) => updateSetting('amplitude', e.target.value)}
+            />
+            <div className="slider-icon">
+              <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M16.5 60C16.5 60 27.5 92 38.25 92C49 92 56.5 70 60 60C63.5 50 71.5 28 81.75 28C92 28 103.5 60 103.5 60" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="5" strokeLinecap="round"/>
+              </svg>
             </div>
-            <div className="control-group">
-              <label>Frequency</label>
-              <div className="slider-container">
-                <div className="slider-icon">
-                  <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M16.5 60C16.5 60 29.25 59.5 38.5 61.5C47.75 63.5001 50 67 60 67C70 67 71.75 63.5 82 61.5C92.25 59.5 103.5 60 103.5 60" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="5" strokeLinecap="round"/>
-                  </svg>
-                </div>
-                <input
-                  type="range"
-                  min="0.5"
-                  max="3"
-                  step="0.5"
-                  value={currentSettings.frequency}
-                  onChange={(e) => updateSetting('frequency', e.target.value)}
-                />
-                <div className="slider-icon">
-                  <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M104 76C104 76 96.0875 71 93.0625 60C91 52.5 89.6938 44 82.125 44C74.5562 44 71.1875 60 71.1875 60C71.1875 60 67.8188 76 60.25 76C52.6812 76 49.3125 60 49.3125 60C49.3125 60 45.9438 44 38.375 44C30.8062 44 29.5 53 27.4375 60C24.0491 71.5 16.5 76 16.5 76" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="5" strokeLinecap="round"/>
-                  </svg>
-                </div>
-              </div>
+          </div>
+        </div>
+        <div className="control-group">
+          <label>Frequency</label>
+          <div className="slider-container">
+            <div className="slider-icon">
+              <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M16.5 60C16.5 60 29.25 59.5 38.5 61.5C47.75 63.5001 50 67 60 67C70 67 71.75 63.5 82 61.5C92.25 59.5 103.5 60 103.5 60" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="5" strokeLinecap="round"/>
+              </svg>
             </div>
-            <div className="control-group">
-              <label>Width</label>
-              <div className="slider-container">
-                <div className="slider-icon">
-                  <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M16.5 60C16.5 60 29.1998 68 38.25 68C47.3002 68 52 64.5 60 60C68 55.5 72.6998 52 81.75 52C90.8002 52 103.5 60 103.5 60" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="5" strokeLinecap="round"/>
-                  </svg>
-                </div>
-                <input
-                  type="range"
-                  min="1"
-                  max="10"
-                  value={currentSettings.strokeWidth}
-                  onChange={(e) => updateSetting('strokeWidth', e.target.value)}
-                />
-                <div className="slider-icon">
-                  <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M16.5 60C16.5 60 29.1998 68 38.25 68C47.3002 68 52 64.5 60 60C68 55.5 72.6998 52 81.75 52C90.8002 52 103.5 60 103.5 60" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="20" strokeLinecap="round"/>
-                  </svg>
-                </div>
-              </div>
+            <input
+              type="range"
+              min="0.5"
+              max="3"
+              step="0.5"
+              value={currentSettings.frequency}
+              onChange={(e) => updateSetting('frequency', e.target.value)}
+            />
+            <div className="slider-icon">
+              <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M104 76C104 76 96.0875 71 93.0625 60C91 52.5 89.6938 44 82.125 44C74.5562 44 71.1875 60 71.1875 60C71.1875 60 67.8188 76 60.25 76C52.6812 76 49.3125 60 49.3125 60C49.3125 60 45.9438 44 38.375 44C30.8062 44 29.5 53 27.4375 60C24.0491 71.5 16.5 76 16.5 76" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="5" strokeLinecap="round"/>
+              </svg>
             </div>
-          </>
-        );
-      
-      case 'blob':
-        return (
-          <>
-            <div className="control-group">
-              <label>Blob count</label>
-              <div className="slider-container">
-                <div className="slider-icon"></div>
-                <input
-                  type="range"
-                  min="5"
-                  max="50"
-                  value={currentSettings.blobCount}
-                  onChange={(e) => updateSetting('blobCount', e.target.value)}
-                />
-                <div className="slider-icon"></div>
-              </div>
+          </div>
+        </div>
+        <div className="control-group">
+          <label>Width</label>
+          <div className="slider-container">
+            <div className="slider-icon">
+              <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M16.5 60C16.5 60 29.1998 68 38.25 68C47.3002 68 52 64.5 60 60C68 55.5 72.6998 52 81.75 52C90.8002 52 103.5 60 103.5 60" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="5" strokeLinecap="round"/>
+              </svg>
             </div>
-            <div className="control-group">
-              <label>Size</label>
-              <div className="slider-container">
-                <div className="slider-icon"></div>
-                <input
-                  type="range"
-                  min="30"
-                  max="150"
-                  value={currentSettings.size}
-                  onChange={(e) => updateSetting('size', e.target.value)}
-                />
-                <div className="slider-icon"></div>
-              </div>
+            <input
+              type="range"
+              min="1"
+              max="10"
+              value={currentSettings.strokeWidth}
+              onChange={(e) => updateSetting('strokeWidth', e.target.value)}
+            />
+            <div className="slider-icon">
+              <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M16.5 60C16.5 60 29.1998 68 38.25 68C47.3002 68 52 64.5 60 60C68 55.5 72.6998 52 81.75 52C90.8002 52 103.5 60 103.5 60" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="20" strokeLinecap="round"/>
+              </svg>
             </div>
-            <div className="control-group">
-              <label>Complexity</label>
-              <div className="slider-container">
-                <div className="slider-icon"></div>
-                <input
-                  type="range"
-                  min="4"
-                  max="16"
-                  value={currentSettings.complexity}
-                  onChange={(e) => updateSetting('complexity', e.target.value)}
-                />
-                <div className="slider-icon"></div>
-              </div>
-            </div>
-            <div className="control-group">
-              <label>Opacity</label>
-              <div className="slider-container">
-                <div className="slider-icon"></div>
-                <input
-                  type="range"
-                  min="0.1"
-                  max="1"
-                  step="0.1"
-                  value={currentSettings.opacity}
-                  onChange={(e) => updateSetting('opacity', e.target.value)}
-                />
-                <div className="slider-icon"></div>
-              </div>
-            </div>
-          </>
-        );
-      
-      case 'circleScatter':
-        return (
-          <>
-            <div className="control-group">
-              <label>Circle count</label>
-              <div className="slider-container">
-                <div className="slider-icon"></div>
-                <input
-                  type="range"
-                  min="10"
-                  max="200"
-                  value={currentSettings.circleCount}
-                  onChange={(e) => updateSetting('circleCount', e.target.value)}
-                />
-                <div className="slider-icon"></div>
-              </div>
-            </div>
-            <div className="control-group">
-              <label>Min radius</label>
-              <div className="slider-container">
-                <div className="slider-icon"></div>
-                <input
-                  type="range"
-                  min="5"
-                  max="50"
-                  value={currentSettings.minRadius}
-                  onChange={(e) => updateSetting('minRadius', e.target.value)}
-                />
-                <div className="slider-icon"></div>
-              </div>
-            </div>
-            <div className="control-group">
-              <label>Max radius</label>
-              <div className="slider-container">
-                <div className="slider-icon"></div>
-                <input
-                  type="range"
-                  min="20"
-                  max="150"
-                  value={currentSettings.maxRadius}
-                  onChange={(e) => updateSetting('maxRadius', e.target.value)}
-                />
-                <div className="slider-icon"></div>
-              </div>
-            </div>
-            <div className="control-group">
-              <label>Stroke width</label>
-              <div className="slider-container">
-                <div className="slider-icon"></div>
-                <input
-                  type="range"
-                  min="1"
-                  max="8"
-                  value={currentSettings.strokeWidth}
-                  onChange={(e) => updateSetting('strokeWidth', e.target.value)}
-                />
-                <div className="slider-icon"></div>
-              </div>
-            </div>
-            <div className="control-group">
-              <label>Opacity</label>
-              <div className="slider-container">
-                <div className="slider-icon"></div>
-                <input
-                  type="range"
-                  min="0.1"
-                  max="1"
-                  step="0.1"
-                  value={currentSettings.opacity}
-                  onChange={(e) => updateSetting('opacity', e.target.value)}
-                />
-                <div className="slider-icon"></div>
-              </div>
-            </div>
-          </>
-        );
-      
-      case 'layeredWaves':
-        return (
-          <>
-            <div className="control-group">
-              <label>Layers</label>
-              <div className="slider-container">
-                <div className="slider-icon"></div>
-                <input
-                  type="range"
-                  min="3"
-                  max="15"
-                  value={currentSettings.layers}
-                  onChange={(e) => updateSetting('layers', e.target.value)}
-                />
-                <div className="slider-icon"></div>
-              </div>
-            </div>
-            <div className="control-group">
-              <label>Amplitude</label>
-              <div className="slider-container">
-                <div className="slider-icon"></div>
-                <input
-                  type="range"
-                  min="20"
-                  max="150"
-                  value={currentSettings.amplitude}
-                  onChange={(e) => updateSetting('amplitude', e.target.value)}
-                />
-                <div className="slider-icon"></div>
-              </div>
-            </div>
-            <div className="control-group">
-              <label>Frequency</label>
-              <div className="slider-container">
-                <div className="slider-icon"></div>
-                <input
-                  type="range"
-                  min="1"
-                  max="10"
-                  step="0.5"
-                  value={currentSettings.frequency}
-                  onChange={(e) => updateSetting('frequency', e.target.value)}
-                />
-                <div className="slider-icon"></div>
-              </div>
-            </div>
-            <div className="control-group">
-              <label>Opacity</label>
-              <div className="slider-container">
-                <div className="slider-icon"></div>
-                <input
-                  type="range"
-                  min="0.1"
-                  max="1"
-                  step="0.1"
-                  value={currentSettings.opacity}
-                  onChange={(e) => updateSetting('opacity', e.target.value)}
-                />
-                <div className="slider-icon"></div>
-              </div>
-            </div>
-          </>
-        );
-      
-      case 'stackedSteps':
-        return (
-          <>
-            <div className="control-group">
-              <label>Steps</label>
-              <div className="slider-container">
-                <div className="slider-icon"></div>
-                <input
-                  type="range"
-                  min="3"
-                  max="20"
-                  value={currentSettings.steps}
-                  onChange={(e) => updateSetting('steps', e.target.value)}
-                />
-                <div className="slider-icon"></div>
-              </div>
-            </div>
-            <div className="control-group">
-              <label>Step height</label>
-              <div className="slider-container">
-                <div className="slider-icon"></div>
-                <input
-                  type="range"
-                  min="30"
-                  max="150"
-                  value={currentSettings.stepHeight}
-                  onChange={(e) => updateSetting('stepHeight', e.target.value)}
-                />
-                <div className="slider-icon"></div>
-              </div>
-            </div>
-            <div className="control-group">
-              <label>Spacing</label>
-              <div className="slider-container">
-                <div className="slider-icon"></div>
-                <input
-                  type="range"
-                  min="5"
-                  max="50"
-                  value={currentSettings.spacing}
-                  onChange={(e) => updateSetting('spacing', e.target.value)}
-                />
-                <div className="slider-icon"></div>
-              </div>
-            </div>
-            <div className="control-group">
-              <label>Opacity</label>
-              <div className="slider-container">
-                <div className="slider-icon"></div>
-                <input
-                  type="range"
-                  min="0.1"
-                  max="1"
-                  step="0.1"
-                  value={currentSettings.opacity}
-                  onChange={(e) => updateSetting('opacity', e.target.value)}
-                />
-                <div className="slider-icon"></div>
-              </div>
-            </div>
-          </>
-        );
-      
-      case 'islamicPattern':
-        return (
-          <>
-            <div className="control-group">
-              <label>Grid size</label>
-              <div className="slider-container">
-                <div className="slider-icon"></div>
-                <input
-                  type="range"
-                  min="4"
-                  max="16"
-                  value={currentSettings.gridSize}
-                  onChange={(e) => updateSetting('gridSize', e.target.value)}
-                />
-                <div className="slider-icon"></div>
-              </div>
-            </div>
-            <div className="control-group">
-              <label>Complexity</label>
-              <div className="slider-container">
-                <div className="slider-icon"></div>
-                <input
-                  type="range"
-                  min="4"
-                  max="12"
-                  value={currentSettings.complexity}
-                  onChange={(e) => updateSetting('complexity', e.target.value)}
-                />
-                <div className="slider-icon"></div>
-              </div>
-            </div>
-            <div className="control-group">
-              <label>Stroke width</label>
-              <div className="slider-container">
-                <div className="slider-icon"></div>
-                <input
-                  type="range"
-                  min="1"
-                  max="6"
-                  value={currentSettings.strokeWidth}
-                  onChange={(e) => updateSetting('strokeWidth', e.target.value)}
-                />
-                <div className="slider-icon"></div>
-              </div>
-            </div>
-            <div className="control-group">
-              <label>Opacity</label>
-              <div className="slider-container">
-                <div className="slider-icon"></div>
-                <input
-                  type="range"
-                  min="0.1"
-                  max="1"
-                  step="0.1"
-                  value={currentSettings.opacity}
-                  onChange={(e) => updateSetting('opacity', e.target.value)}
-                />
-                <div className="slider-icon"></div>
-              </div>
-            </div>
-          </>
-        );
-      
-      case 'floralPattern':
-        return (
-          <>
-            <div className="control-group">
-              <label>Flower count</label>
-              <div className="slider-container">
-                <div className="slider-icon"></div>
-                <input
-                  type="range"
-                  min="5"
-                  max="50"
-                  value={currentSettings.flowerCount}
-                  onChange={(e) => updateSetting('flowerCount', e.target.value)}
-                />
-                <div className="slider-icon"></div>
-              </div>
-            </div>
-            <div className="control-group">
-              <label>Petal count</label>
-              <div className="slider-container">
-                <div className="slider-icon"></div>
-                <input
-                  type="range"
-                  min="4"
-                  max="12"
-                  value={currentSettings.petalCount}
-                  onChange={(e) => updateSetting('petalCount', e.target.value)}
-                />
-                <div className="slider-icon"></div>
-              </div>
-            </div>
-            <div className="control-group">
-              <label>Size</label>
-              <div className="slider-container">
-                <div className="slider-icon"></div>
-                <input
-                  type="range"
-                  min="20"
-                  max="100"
-                  value={currentSettings.size}
-                  onChange={(e) => updateSetting('size', e.target.value)}
-                />
-                <div className="slider-icon"></div>
-              </div>
-            </div>
-            <div className="control-group">
-              <label>Opacity</label>
-              <div className="slider-container">
-                <div className="slider-icon"></div>
-                <input
-                  type="range"
-                  min="0.1"
-                  max="1"
-                  step="0.1"
-                  value={currentSettings.opacity}
-                  onChange={(e) => updateSetting('opacity', e.target.value)}
-                />
-                <div className="slider-icon"></div>
-              </div>
-            </div>
-          </>
-        );
-      
-      default:
-        return null;
-    }
+          </div>
+        </div>
+      </>
+    );
   };
 
   return (
@@ -718,9 +233,10 @@ function App() {
           onMouseMove={handleMouseMove}
           onMouseUp={handleMouseUp}
           onMouseLeave={handleMouseUp}
-          style={{ cursor: isDragging ? 'grabbing' : (selectedPattern === 'wave' ? 'grab' : 'default') }}
+          style={{ cursor: isDragging ? 'grabbing' : 'grab' }}
         >
           <svg
+            key={`wave-${currentSettings.layers}`}
             ref={svgRef}
             width={currentSettings.width}
             height={currentSettings.height}
@@ -732,21 +248,6 @@ function App() {
 
       <div className="side-panel">
         <div className="panel-content">
-          <div className="panel-section">
-            <h2>Pattern Type</h2>
-            <div className="pattern-grid">
-              {patternTypes.map(pattern => (
-                <button
-                  key={pattern.id}
-                  className={`pattern-button ${selectedPattern === pattern.id ? 'active' : ''}`}
-                  onClick={() => setSelectedPattern(pattern.id)}
-                >
-                  {pattern.name}
-                </button>
-              ))}
-            </div>
-          </div>
-
           <div className="panel-section">
             <h2>Canvas Size</h2>
             <div className="size-inputs">
@@ -775,21 +276,24 @@ function App() {
             </div>
           </div>
 
-          <div className="panel-section">
-            <h2>Color</h2>
-            <div className="color-inputs">
-              <CustomColorPicker
-                label="Background"
-                color={backgroundColor}
-                onChange={setBackgroundColor}
-              />
-              <CustomColorPicker
-                label="Fill"
-                color={fillColor}
-                onChange={setFillColor}
-              />
-            </div>
+        <div className="panel-section">
+          <h2>Color</h2>
+          <div className="color-inputs">
+            <CustomColorPicker
+              label="Background"
+              color={backgroundColor}
+              onChange={setBackgroundColor}
+              showEyeToggle={true}
+              isVisible={includeBackground}
+              onToggleVisibility={() => setIncludeBackground(!includeBackground)}
+            />
+            <CustomColorPicker
+              label="Fill"
+              color={fillColor}
+              onChange={setFillColor}
+            />
           </div>
+        </div>
 
           <div className="panel-section">
             <h2>Settings</h2>

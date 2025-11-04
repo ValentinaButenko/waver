@@ -42,6 +42,10 @@
   display: block;
 }
 
+.canvas-wrapper svg rect {
+  animation: none;
+}
+
 .side-panel {
   width: 360px;
   background: var(--bg);
