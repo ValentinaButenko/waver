@@ -102,7 +102,14 @@ function App() {
         
         // Only add point if moved at least 3 pixels
         if (distance >= 3) {
-          return [...prev, { x, y }];
+          const newPath = [...prev, { x, y }];
+          
+          // Enable real-time pattern rendering once we have enough points
+          if (newPath.length > 10 && !useCustomPath) {
+            setUseCustomPath(true);
+          }
+          
+          return newPath;
         }
         return prev;
       });
@@ -139,7 +146,8 @@ function App() {
   const handleMouseUp = () => {
     if (isDrawingMode && isDrawing) {
       setIsDrawing(false);
-      if (customPath.length > 5) {
+      // Keep the pattern visible even if path is short
+      if (customPath.length > 0) {
         setUseCustomPath(true);
       }
     } else {

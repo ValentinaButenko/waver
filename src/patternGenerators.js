@@ -6,12 +6,12 @@ export const generateWave = (settings, phaseOffsets = []) => {
   let rawPoints = [];
   
   // Use custom path if provided, otherwise generate default
-  if (customPath && customPath.length > 5) {
+  if (customPath && customPath.length > 10) {
     // MULTI-PASS SMOOTHING for ultra-smooth custom paths
     let smoothedPath = [...customPath];
     
-    // First pass: Apply aggressive Gaussian smoothing
-    const smoothingPasses = 3;
+    // First pass: Apply aggressive Gaussian smoothing (2 passes for real-time performance)
+    const smoothingPasses = 2;
     for (let pass = 0; pass < smoothingPasses; pass++) {
       const tempPath = [];
       const smoothingWindow = Math.min(15, Math.floor(smoothedPath.length / 8));
