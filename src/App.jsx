@@ -15,7 +15,7 @@ const defaultSettings = {
     layers: 25,
     verticalOffset: 0,
     horizontalOffset: 0,
-    patternHeight: 1040  // Reference height for pattern generation
+    patternWidth: 1280  // Reference width for pattern generation (horizontal flow)
   }
 };
 

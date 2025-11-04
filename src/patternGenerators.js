@@ -55,18 +55,18 @@ export const generateWave = (settings, phaseOffsets = []) => {
   } else {
     // Generate core path points - ULTRA HIGH density for perfect smoothness
     const numPoints = 800;
-    const centerX = width / 2;
+    const centerY = height / 2;
     
-    // Use patternHeight for consistent generation, or fall back to height
-    const patternHeight = settings.patternHeight || height;
+    // Use patternWidth for consistent generation, or fall back to width
+    const patternWidth = settings.patternWidth || width;
     
-    // Generate raw points based on patternHeight (not canvas height)
+    // Generate raw points for HORIZONTAL flow (left to right)
     for (let i = 0; i < numPoints; i++) {
       const t = i / (numPoints - 1);
-      const y = t * patternHeight + verticalOffset;
+      const x = t * patternWidth + horizontalOffset;
       
-      // Create flowing X movement (horizontalOffset applied later to all points)
-      const x = centerX + Math.sin(t * Math.PI * frequency * 2) * amplitude * Math.sin(t * Math.PI * 1.5);
+      // Create flowing Y movement (verticalOffset applied later to all points)
+      const y = centerY + Math.sin(t * Math.PI * frequency * 2) * amplitude * Math.sin(t * Math.PI * 1.5);
       
       // DRAMATIC spread factor - this controls how much lines spread apart or compress
       // Low value = lines compressed together (dark), High value = lines spread apart (white gaps)
@@ -201,8 +201,8 @@ export const generateWave = (settings, phaseOffsets = []) => {
       const offsetDistance = distanceFromCore * dynamicSpacing * taperFactor;
       
       // Calculate final position with offsets
-      const x = point.x + perpX * offsetDistance + horizontalOffset;
-      const y = point.y + perpY * offsetDistance;
+      const x = point.x + perpX * offsetDistance;
+      const y = point.y + perpY * offsetDistance + verticalOffset;
       
       layerPoints.push({ x, y });
     }
