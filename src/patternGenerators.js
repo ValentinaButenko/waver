@@ -1,6 +1,6 @@
 // Wave Pattern Generator - Flowing Ribbon Style with Dynamic Spreading
 export const generateWave = (settings, phaseOffsets = []) => {
-  const { width, height, amplitude, frequency, strokeWidth, color, opacity, layers, verticalOffset = 0, customPath } = settings;
+  const { width, height, amplitude, frequency, strokeWidth, color, opacity, layers, verticalOffset = 0, horizontalOffset = 0, customPath } = settings;
   let paths = '';
   
   let rawPoints = [];
@@ -65,7 +65,7 @@ export const generateWave = (settings, phaseOffsets = []) => {
       const t = i / (numPoints - 1);
       const y = t * patternHeight + verticalOffset;
       
-      // Create flowing X movement
+      // Create flowing X movement (horizontalOffset applied later to all points)
       const x = centerX + Math.sin(t * Math.PI * frequency * 2) * amplitude * Math.sin(t * Math.PI * 1.5);
       
       // DRAMATIC spread factor - this controls how much lines spread apart or compress
@@ -200,8 +200,8 @@ export const generateWave = (settings, phaseOffsets = []) => {
       // Calculate offset using dynamic spacing with tapering
       const offsetDistance = distanceFromCore * dynamicSpacing * taperFactor;
       
-      // Calculate final position
-      const x = point.x + perpX * offsetDistance;
+      // Calculate final position with offsets
+      const x = point.x + perpX * offsetDistance + horizontalOffset;
       const y = point.y + perpY * offsetDistance;
       
       layerPoints.push({ x, y });

@@ -14,6 +14,7 @@ const defaultSettings = {
     opacity: 1.0,
     layers: 25,
     verticalOffset: 0,
+    horizontalOffset: 0,
     patternHeight: 1040  // Reference height for pattern generation
   }
 };
@@ -24,8 +25,10 @@ function App() {
   const [backgroundColor, setBackgroundColor] = useState('F5F5F0');
   const [fillColor, setFillColor] = useState('000000');
   const [isDragging, setIsDragging] = useState(false);
+  const [dragStartX, setDragStartX] = useState(0);
   const [dragStartY, setDragStartY] = useState(0);
-  const [initialOffset, setInitialOffset] = useState(0);
+  const [initialVerticalOffset, setInitialVerticalOffset] = useState(0);
+  const [initialHorizontalOffset, setInitialHorizontalOffset] = useState(0);
   const [includeBackground, setIncludeBackground] = useState(true);
   const [wavePhaseOffsets, setWavePhaseOffsets] = useState([]);
   const [isDrawingMode, setIsDrawingMode] = useState(false);
@@ -74,8 +77,10 @@ function App() {
       setCustomPath([{ x, y }]);
     } else {
       setIsDragging(true);
+      setDragStartX(e.clientX);
       setDragStartY(e.clientY);
-      setInitialOffset(currentSettings.verticalOffset || 0);
+      setInitialVerticalOffset(currentSettings.verticalOffset || 0);
+      setInitialHorizontalOffset(currentSettings.horizontalOffset || 0);
     }
     e.preventDefault();
   };
@@ -102,9 +107,20 @@ function App() {
         return prev;
       });
     } else if (isDragging) {
+      const deltaX = e.clientX - dragStartX;
       const deltaY = e.clientY - dragStartY;
-      const newOffset = initialOffset + deltaY;
-      updateSetting('verticalOffset', newOffset);
+      const newVerticalOffset = initialVerticalOffset + deltaY;
+      const newHorizontalOffset = initialHorizontalOffset + deltaX;
+      
+      // Update both offsets at once
+      setSettings(prev => ({
+        ...prev,
+        [selectedPattern]: {
+          ...prev[selectedPattern],
+          verticalOffset: newVerticalOffset,
+          horizontalOffset: newHorizontalOffset
+        }
+      }));
     }
   };
 
