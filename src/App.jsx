@@ -112,8 +112,15 @@ function App() {
       const scaleX = currentSettings.width / rect.width;
       const scaleY = currentSettings.height / rect.height;
       
-      const deltaX = (e.clientX - dragStartX) * scaleX;
-      const deltaY = (e.clientY - dragStartY) * scaleY;
+      // Get screen space deltas
+      const screenDeltaX = (e.clientX - dragStartX) * scaleX;
+      const screenDeltaY = (e.clientY - dragStartY) * scaleY;
+      
+      // Apply inverse rotation to deltas so drag feels natural even when pattern is rotated
+      const rotationRad = (-rotation * Math.PI) / 180; // Negative for inverse rotation
+      const deltaX = screenDeltaX * Math.cos(rotationRad) - screenDeltaY * Math.sin(rotationRad);
+      const deltaY = screenDeltaX * Math.sin(rotationRad) + screenDeltaY * Math.cos(rotationRad);
+      
       const newVerticalOffset = initialVerticalOffset + deltaY;
       const newHorizontalOffset = initialHorizontalOffset + deltaX;
       
