@@ -7,12 +7,12 @@ const defaultSettings = {
   wave: {
     width: 1280,
     height: 1040,
-    amplitude: 80,
+    amplitude: 150,
     frequency: 2,
-    strokeWidth: 3,
-    color: '#667eea',
-    opacity: 0.8,
-    layers: 5,
+    strokeWidth: 1.2,
+    color: '#000000',
+    opacity: 1.0,
+    layers: 25,
     verticalOffset: 0
   }
 };
@@ -20,20 +20,26 @@ const defaultSettings = {
 function App() {
   const [selectedPattern, setSelectedPattern] = useState('wave');
   const [settings, setSettings] = useState(defaultSettings);
-  const [backgroundColor, setBackgroundColor] = useState('002233');
-  const [fillColor, setFillColor] = useState('0066FF');
+  const [backgroundColor, setBackgroundColor] = useState('F5F5F0');
+  const [fillColor, setFillColor] = useState('000000');
   const [isDragging, setIsDragging] = useState(false);
   const [dragStartY, setDragStartY] = useState(0);
   const [initialOffset, setInitialOffset] = useState(0);
   const [includeBackground, setIncludeBackground] = useState(true);
   const [wavePhaseOffsets, setWavePhaseOffsets] = useState([]);
+  const [isDrawingMode, setIsDrawingMode] = useState(false);
+  const [isDrawing, setIsDrawing] = useState(false);
+  const [customPath, setCustomPath] = useState([]);
+  const [useCustomPath, setUseCustomPath] = useState(false);
+  const [showDrawnLine, setShowDrawnLine] = useState(true);
   const svgRef = useRef(null);
+  const canvasRef = useRef(null);
 
   const currentSettings = settings[selectedPattern];
 
   // Generate phase offsets when wave settings change (but not when just dragging)
   useEffect(() => {
-    const layers = currentSettings.layers || 5;
+    const layers = currentSettings.layers || 25;
     const newPhaseOffsets = Array.from({ length: layers }, () => Math.random() * Math.PI * 2);
     setWavePhaseOffsets(newPhaseOffsets);
   }, [
@@ -55,14 +61,41 @@ function App() {
   };
 
   const handleMouseDown = (e) => {
-    setIsDragging(true);
-    setDragStartY(e.clientY);
-    setInitialOffset(currentSettings.verticalOffset || 0);
+    if (isDrawingMode) {
+      setIsDrawing(true);
+      setCustomPath([]);
+      const rect = canvasRef.current.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      setCustomPath([{ x, y }]);
+    } else {
+      setIsDragging(true);
+      setDragStartY(e.clientY);
+      setInitialOffset(currentSettings.verticalOffset || 0);
+    }
     e.preventDefault();
   };
 
   const handleMouseMove = (e) => {
-    if (isDragging) {
+    if (isDrawingMode && isDrawing) {
+      const rect = canvasRef.current.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      
+      // Only add point if it's far enough from the last point (reduces jitter)
+      setCustomPath(prev => {
+        if (prev.length === 0) return [{ x, y }];
+        
+        const lastPoint = prev[prev.length - 1];
+        const distance = Math.sqrt(Math.pow(x - lastPoint.x, 2) + Math.pow(y - lastPoint.y, 2));
+        
+        // Only add point if moved at least 3 pixels
+        if (distance >= 3) {
+          return [...prev, { x, y }];
+        }
+        return prev;
+      });
+    } else if (isDragging) {
       const deltaY = e.clientY - dragStartY;
       const newOffset = initialOffset + deltaY;
       updateSetting('verticalOffset', newOffset);
@@ -70,13 +103,50 @@ function App() {
   };
 
   const handleMouseUp = () => {
-    setIsDragging(false);
+    if (isDrawingMode && isDrawing) {
+      setIsDrawing(false);
+      if (customPath.length > 5) {
+        setUseCustomPath(true);
+      }
+    } else {
+      setIsDragging(false);
+    }
+  };
+
+  const handleClearPath = () => {
+    setCustomPath([]);
+    setUseCustomPath(false);
+    setShowDrawnLine(true); // Reset to show by default
+  };
+
+  const toggleDrawingMode = () => {
+    const newDrawingMode = !isDrawingMode;
+    setIsDrawingMode(newDrawingMode);
+    
+    if (newDrawingMode) {
+      // Entering drawing mode - clear everything for blank canvas
+      setCustomPath([]);
+      setUseCustomPath(false);
+      setShowDrawnLine(true); // Reset to show by default
+    } else {
+      // Exiting drawing mode - if no path was drawn, return to default pattern
+      if (customPath.length === 0) {
+        setUseCustomPath(false);
+      }
+    }
   };
 
   const generatePattern = () => {
+    // If in drawing mode and no custom path yet, show only background
+    if (isDrawingMode && !useCustomPath) {
+      const background = includeBackground ? `<rect width="100%" height="100%" fill="#${backgroundColor}"/>` : '';
+      return background;
+    }
+    
     const patternSettings = { 
       ...currentSettings,
-      color: `#${fillColor}`
+      color: `#${fillColor}`,
+      customPath: useCustomPath ? customPath : null
     };
     
     const pattern = generateWave(patternSettings, wavePhaseOffsets);
@@ -137,21 +207,22 @@ function App() {
     return (
       <>
         <div className="control-group">
-          <label>Layers</label>
-          <div className="layers-grid">
-            {[1, 2, 3, 4, 5].map(layerNum => (
-              <button
-                key={layerNum}
-                className={`pattern-button ${currentSettings.layers === layerNum ? 'active' : ''}`}
-                onClick={() => updateSetting('layers', layerNum)}
-              >
-                {layerNum}
-              </button>
-            ))}
+          <label>Layers: {currentSettings.layers}</label>
+          <div className="slider-container">
+            <div className="slider-icon"></div>
+            <input
+              type="range"
+              min="5"
+              max="60"
+              step="1"
+              value={currentSettings.layers}
+              onChange={(e) => updateSetting('layers', e.target.value)}
+            />
+            <div className="slider-icon"></div>
           </div>
         </div>
         <div className="control-group">
-          <label>Amplitude</label>
+          <label>Amplitude: {currentSettings.amplitude}</label>
           <div className="slider-container">
             <div className="slider-icon">
               <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -160,8 +231,9 @@ function App() {
             </div>
             <input
               type="range"
-              min="20"
-              max="120"
+              min="50"
+              max="300"
+              step="10"
               value={currentSettings.amplitude}
               onChange={(e) => updateSetting('amplitude', e.target.value)}
             />
@@ -173,7 +245,7 @@ function App() {
           </div>
         </div>
         <div className="control-group">
-          <label>Frequency</label>
+          <label>Frequency: {currentSettings.frequency}</label>
           <div className="slider-container">
             <div className="slider-icon">
               <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -182,8 +254,8 @@ function App() {
             </div>
             <input
               type="range"
-              min="0.5"
-              max="3"
+              min="1"
+              max="5"
               step="0.5"
               value={currentSettings.frequency}
               onChange={(e) => updateSetting('frequency', e.target.value)}
@@ -196,23 +268,24 @@ function App() {
           </div>
         </div>
         <div className="control-group">
-          <label>Width</label>
+          <label>Width: {currentSettings.strokeWidth}</label>
           <div className="slider-container">
             <div className="slider-icon">
               <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M16.5 60C16.5 60 29.1998 68 38.25 68C47.3002 68 52 64.5 60 60C68 55.5 72.6998 52 81.75 52C90.8002 52 103.5 60 103.5 60" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="5" strokeLinecap="round"/>
+                <path d="M16.5 60C16.5 60 29.1998 68 38.25 68C47.3002 68 52 64.5 60 60C68 55.5 72.6998 52 81.75 52C90.8002 52 103.5 60 103.5 60" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="2" strokeLinecap="round"/>
               </svg>
             </div>
             <input
               type="range"
-              min="1"
-              max="10"
+              min="0.1"
+              max="5"
+              step="0.1"
               value={currentSettings.strokeWidth}
               onChange={(e) => updateSetting('strokeWidth', e.target.value)}
             />
             <div className="slider-icon">
               <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M16.5 60C16.5 60 29.1998 68 38.25 68C47.3002 68 52 64.5 60 60C68 55.5 72.6998 52 81.75 52C90.8002 52 103.5 60 103.5 60" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="20" strokeLinecap="round"/>
+                <path d="M16.5 60C16.5 60 29.1998 68 38.25 68C47.3002 68 52 64.5 60 60C68 55.5 72.6998 52 81.75 52C90.8002 52 103.5 60 103.5 60" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="12" strokeLinecap="round"/>
               </svg>
             </div>
           </div>
@@ -229,11 +302,15 @@ function App() {
         </div>
         <div 
           className="canvas-wrapper"
+          ref={canvasRef}
           onMouseDown={handleMouseDown}
           onMouseMove={handleMouseMove}
           onMouseUp={handleMouseUp}
           onMouseLeave={handleMouseUp}
-          style={{ cursor: isDragging ? 'grabbing' : 'grab' }}
+          style={{ 
+            cursor: isDrawingMode ? 'crosshair' : (isDragging ? 'grabbing' : 'grab'),
+            position: 'relative'
+          }}
         >
           <svg
             key={`wave-${currentSettings.layers}`}
@@ -243,11 +320,69 @@ function App() {
             xmlns="http://www.w3.org/2000/svg"
             dangerouslySetInnerHTML={{ __html: generatePattern() }}
           />
+          {isDrawingMode && customPath.length > 0 && showDrawnLine && (
+            <svg
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                width: currentSettings.width,
+                height: currentSettings.height,
+                pointerEvents: 'none',
+                zIndex: 10
+              }}
+            >
+              <path
+                d={`M ${customPath.map(p => `${p.x} ${p.y}`).join(' L ')}`}
+                stroke="#FF0000"
+                strokeWidth="3"
+                fill="none"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          )}
         </div>
       </div>
 
       <div className="side-panel">
         <div className="panel-content">
+          <div className="panel-section">
+            <h2>Draw Custom Path</h2>
+            <div className="export-buttons">
+              <button 
+                className={`export-button ${isDrawingMode ? 'export-button-secondary' : ''}`}
+                onClick={toggleDrawingMode}
+              >
+                {isDrawingMode ? 'Exit Drawing' : 'Draw Path'}
+              </button>
+              {customPath.length > 0 && (
+                <>
+                  <button 
+                    className="export-button export-button-secondary"
+                    onClick={handleClearPath}
+                  >
+                    Clear
+                  </button>
+                  <button 
+                    className="export-button export-button-secondary"
+                    onClick={() => setShowDrawnLine(!showDrawnLine)}
+                    title={showDrawnLine ? 'Hide drawn line' : 'Show drawn line'}
+                  >
+                    {showDrawnLine ? '👁️' : '👁️‍🗨️'}
+                  </button>
+                </>
+              )}
+            </div>
+            {isDrawingMode && (
+              <p style={{ fontSize: '12px', color: '#888', marginTop: '10px' }}>
+                {useCustomPath 
+                  ? 'Pattern applied! Clear to draw a new path' 
+                  : 'Draw your custom path on the blank canvas'}
+              </p>
+            )}
+          </div>
+
           <div className="panel-section">
             <h2>Canvas Size</h2>
             <div className="size-inputs">
