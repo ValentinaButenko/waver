@@ -154,6 +154,12 @@
   gap: 10px;
 }
 
+.pattern-selector {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
 .layers-grid {
   display: grid;
   grid-template-columns: repeat(5, 1fr);

@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import './App.css';
 import CustomColorPicker from './CustomColorPicker';
-import { generateWave } from './patternGenerators';
+import { generateWave, generateNeurons } from './patternGenerators';
 import { ArrowsCounterClockwise, MagnifyingGlassPlus, MagnifyingGlassMinus, MagicWand, Eraser, PenNib } from 'phosphor-react';
 import DrawIcon from './draw.svg?raw';
 
@@ -15,6 +15,21 @@ const defaultSettings = {
     color: '#000000',
     opacity: 1.0,
     layers: 25,
+    verticalOffset: 0,
+    horizontalOffset: 0
+  },
+  neurons: {
+    width: 1280,
+    height: 1040,
+    strokeWidth: 1.5,
+    color: '#000000',
+    opacity: 1.0,
+    branches: 12,
+    depth: 4,
+    spread: 0.8,
+    curvature: 0.3,
+    nodeSize: 3,
+    branchProbability: 0.7,
     verticalOffset: 0,
     horizontalOffset: 0
   }
@@ -337,7 +352,13 @@ function App() {
       customPath: useCustomPath ? customPath : null
     };
     
-    const pattern = generateWave(patternSettings, wavePhaseOffsets);
+    // Call the appropriate generator based on selected pattern
+    let pattern;
+    if (selectedPattern === 'neurons') {
+      pattern = generateNeurons(patternSettings);
+    } else {
+      pattern = generateWave(patternSettings, wavePhaseOffsets);
+    }
     
     return pattern;
   };
@@ -390,108 +411,295 @@ function App() {
   };
 
   const renderControls = () => {
-    return (
-      <>
-        <div className="control-group">
-          <label>Layers</label>
-          <div className="slider-container">
-            <div className="slider-icon">
-              <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M16.5 51C16.5 51 29.1998 59 38.25 59C47.3002 59 52 55.5 60 51C68 46.5 72.6998 43 81.75 43C90.8002 43 103.5 51 103.5 51" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="3" strokeLinecap="round"/>
-                <path d="M16 68C16 68 28.6998 76 37.75 76C46.8002 76 51.5 72.5 59.5 68C67.5 63.5 72.1998 60 81.25 60C90.3002 60 103 68 103 68" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="3" strokeLinecap="round"/>
-              </svg>
-            </div>
-            <input
-              type="range"
-              min="5"
-              max="60"
-              step="1"
-              value={currentSettings.layers}
-              onChange={(e) => updateSetting('layers', e.target.value)}
-            />
-            <div className="slider-icon">
-              <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M16.5 43C16.5 43 29.1998 51 38.25 51C47.3002 51 52 47.5 60 43C68 38.5 72.6998 35 81.75 35C90.8002 35 103.5 43 103.5 43" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="3" strokeLinecap="round"/>
-                <path d="M16.5 32C16.5 32 29.1998 40 38.25 40C47.3002 40 52 36.5 60 32C68 27.5 72.6998 24 81.75 24C90.8002 24 103.5 32 103.5 32" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="3" strokeLinecap="round"/>
-                <path d="M16.5 54C16.5 54 29.1998 62 38.25 62C47.3002 62 52 58.5 60 54C68 49.5 72.6998 46 81.75 46C90.8002 46 103.5 54 103.5 54" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="3" strokeLinecap="round"/>
-                <path d="M16.5 76C16.5 76 29.1998 84 38.25 84C47.3002 84 52 80.5 60 76C68 71.5 72.6998 68 81.75 68C90.8002 68 103.5 76 103.5 76" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="3" strokeLinecap="round"/>
-                <path d="M16.5 87C16.5 87 29.1998 95 38.25 95C47.3002 95 52 91.5 60 87C68 82.5 72.6998 79 81.75 79C90.8002 79 103.5 87 103.5 87" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="3" strokeLinecap="round"/>
-                <path d="M16 65C16 65 28.6998 73 37.75 73C46.8002 73 51.5 69.5 59.5 65C67.5 60.5 72.1998 57 81.25 57C90.3002 57 103 65 103 65" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="3" strokeLinecap="round"/>
-              </svg>
-            </div>
-          </div>
-        </div>
-        <div className="control-group">
-          <label>Amplitude</label>
-          <div className="slider-container">
-            <div className="slider-icon">
-              <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M16.5 60C16.5 60 29.1998 68 38.25 68C47.3002 68 52 64.5 60 60C68 55.5 72.6998 52 81.75 52C90.8002 52 103.5 60 103.5 60" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="5" strokeLinecap="round"/>
-              </svg>
-            </div>
-            <input
-              type="range"
-              min="50"
-              max="300"
-              step="10"
-              value={currentSettings.amplitude}
-              onChange={(e) => updateSetting('amplitude', e.target.value)}
-            />
-            <div className="slider-icon">
-              <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M16.5 60C16.5 60 27.5 92 38.25 92C49 92 56.5 70 60 60C63.5 50 71.5 28 81.75 28C92 28 103.5 60 103.5 60" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="5" strokeLinecap="round"/>
-              </svg>
+    if (selectedPattern === 'neurons') {
+      return (
+        <>
+          <div className="control-group">
+            <label>Branches</label>
+            <div className="slider-container">
+              <div className="slider-icon">
+                <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <circle cx="60" cy="60" r="3" fill="rgba(255, 255, 255, 0.7)"/>
+                  <line x1="60" y1="60" x2="60" y2="30" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="2"/>
+                  <line x1="60" y1="60" x2="90" y2="60" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="2"/>
+                </svg>
+              </div>
+              <input
+                type="range"
+                min="3"
+                max="24"
+                step="1"
+                value={currentSettings.branches}
+                onChange={(e) => updateSetting('branches', e.target.value)}
+              />
+              <div className="slider-icon">
+                <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <circle cx="60" cy="60" r="3" fill="rgba(255, 255, 255, 0.7)"/>
+                  <line x1="60" y1="60" x2="60" y2="20" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="2"/>
+                  <line x1="60" y1="60" x2="100" y2="60" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="2"/>
+                  <line x1="60" y1="60" x2="60" y2="100" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="2"/>
+                  <line x1="60" y1="60" x2="20" y2="60" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="2"/>
+                  <line x1="60" y1="60" x2="35" y2="35" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="2"/>
+                  <line x1="60" y1="60" x2="85" y2="35" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="2"/>
+                </svg>
+              </div>
             </div>
           </div>
-        </div>
-        <div className="control-group">
-          <label>Frequency</label>
-          <div className="slider-container">
-            <div className="slider-icon">
-              <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M16.5 60C16.5 60 29.25 59.5 38.5 61.5C47.75 63.5001 50 67 60 67C70 67 71.75 63.5 82 61.5C92.25 59.5 103.5 60 103.5 60" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="5" strokeLinecap="round"/>
-              </svg>
-            </div>
-            <input
-              type="range"
-              min="1"
-              max="5"
-              step="0.5"
-              value={currentSettings.frequency}
-              onChange={(e) => updateSetting('frequency', e.target.value)}
-            />
-            <div className="slider-icon">
-              <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M104 76C104 76 96.0875 71 93.0625 60C91 52.5 89.6938 44 82.125 44C74.5562 44 71.1875 60 71.1875 60C71.1875 60 67.8188 76 60.25 76C52.6812 76 49.3125 60 49.3125 60C49.3125 60 45.9438 44 38.375 44C30.8062 44 29.5 53 27.4375 60C24.0491 71.5 16.5 76 16.5 76" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="5" strokeLinecap="round"/>
-              </svg>
-            </div>
-          </div>
-        </div>
-        <div className="control-group">
-          <label>Width</label>
-          <div className="slider-container">
-            <div className="slider-icon">
-              <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M16.5 60C16.5 60 29.1998 68 38.25 68C47.3002 68 52 64.5 60 60C68 55.5 72.6998 52 81.75 52C90.8002 52 103.5 60 103.5 60" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="2" strokeLinecap="round"/>
-              </svg>
-            </div>
-            <input
-              type="range"
-              min="0.1"
-              max="5"
-              step="0.1"
-              value={currentSettings.strokeWidth}
-              onChange={(e) => updateSetting('strokeWidth', e.target.value)}
-            />
-            <div className="slider-icon">
-              <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M16.5 60C16.5 60 29.1998 68 38.25 68C47.3002 68 52 64.5 60 60C68 55.5 72.6998 52 81.75 52C90.8002 52 103.5 60 103.5 60" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="12" strokeLinecap="round"/>
-              </svg>
+          <div className="control-group">
+            <label>Depth</label>
+            <div className="slider-container">
+              <div className="slider-icon">
+                <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <circle cx="60" cy="60" r="2" fill="rgba(255, 255, 255, 0.7)"/>
+                  <line x1="60" y1="60" x2="60" y2="40" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="2"/>
+                  <circle cx="60" cy="40" r="1.5" fill="rgba(255, 255, 255, 0.7)"/>
+                </svg>
+              </div>
+              <input
+                type="range"
+                min="2"
+                max="6"
+                step="1"
+                value={currentSettings.depth}
+                onChange={(e) => updateSetting('depth', e.target.value)}
+              />
+              <div className="slider-icon">
+                <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <circle cx="60" cy="60" r="2" fill="rgba(255, 255, 255, 0.7)"/>
+                  <line x1="60" y1="60" x2="60" y2="45" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="2"/>
+                  <circle cx="60" cy="45" r="1.5" fill="rgba(255, 255, 255, 0.7)"/>
+                  <line x1="60" y1="45" x2="50" y2="33" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="1.5"/>
+                  <line x1="60" y1="45" x2="70" y2="33" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="1.5"/>
+                  <circle cx="50" cy="33" r="1" fill="rgba(255, 255, 255, 0.7)"/>
+                  <circle cx="70" cy="33" r="1" fill="rgba(255, 255, 255, 0.7)"/>
+                </svg>
+              </div>
             </div>
           </div>
-        </div>
-      </>
-    );
+          <div className="control-group">
+            <label>Spread</label>
+            <div className="slider-container">
+              <div className="slider-icon">
+                <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <circle cx="60" cy="60" r="2" fill="rgba(255, 255, 255, 0.7)"/>
+                  <line x1="60" y1="60" x2="55" y2="40" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="2"/>
+                  <line x1="60" y1="60" x2="65" y2="40" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="2"/>
+                </svg>
+              </div>
+              <input
+                type="range"
+                min="0.3"
+                max="1.2"
+                step="0.1"
+                value={currentSettings.spread}
+                onChange={(e) => updateSetting('spread', e.target.value)}
+              />
+              <div className="slider-icon">
+                <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <circle cx="60" cy="60" r="2" fill="rgba(255, 255, 255, 0.7)"/>
+                  <line x1="60" y1="60" x2="40" y2="40" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="2"/>
+                  <line x1="60" y1="60" x2="80" y2="40" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="2"/>
+                </svg>
+              </div>
+            </div>
+          </div>
+          <div className="control-group">
+            <label>Curvature</label>
+            <div className="slider-container">
+              <div className="slider-icon">
+                <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <line x1="60" y1="80" x2="60" y2="40" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="2"/>
+                </svg>
+              </div>
+              <input
+                type="range"
+                min="0.1"
+                max="0.8"
+                step="0.05"
+                value={currentSettings.curvature}
+                onChange={(e) => updateSetting('curvature', e.target.value)}
+              />
+              <div className="slider-icon">
+                <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M60 80 Q 45 60 60 40" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="2" fill="none"/>
+                </svg>
+              </div>
+            </div>
+          </div>
+          <div className="control-group">
+            <label>Node Size</label>
+            <div className="slider-container">
+              <div className="slider-icon">
+                <circle cx="10" cy="10" r="1.5" fill="rgba(255, 255, 255, 0.7)"/>
+              </div>
+              <input
+                type="range"
+                min="1"
+                max="8"
+                step="0.5"
+                value={currentSettings.nodeSize}
+                onChange={(e) => updateSetting('nodeSize', e.target.value)}
+              />
+              <div className="slider-icon">
+                <circle cx="10" cy="10" r="4" fill="rgba(255, 255, 255, 0.7)"/>
+              </div>
+            </div>
+          </div>
+          <div className="control-group">
+            <label>Branch Density</label>
+            <div className="slider-container">
+              <div className="slider-icon">
+                <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <circle cx="60" cy="60" r="2" fill="rgba(255, 255, 255, 0.7)"/>
+                  <line x1="60" y1="60" x2="60" y2="40" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="2"/>
+                </svg>
+              </div>
+              <input
+                type="range"
+                min="0.3"
+                max="0.95"
+                step="0.05"
+                value={currentSettings.branchProbability}
+                onChange={(e) => updateSetting('branchProbability', e.target.value)}
+              />
+              <div className="slider-icon">
+                <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <circle cx="60" cy="60" r="2" fill="rgba(255, 255, 255, 0.7)"/>
+                  <line x1="60" y1="60" x2="60" y2="45" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="2"/>
+                  <line x1="60" y1="45" x2="50" y2="33" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="1.5"/>
+                  <line x1="60" y1="45" x2="70" y2="33" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="1.5"/>
+                  <line x1="50" y1="33" x2="45" y2="23" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="1"/>
+                  <line x1="50" y1="33" x2="55" y2="23" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="1"/>
+                </svg>
+              </div>
+            </div>
+          </div>
+          <div className="control-group">
+            <label>Line Width</label>
+            <div className="slider-container">
+              <div className="slider-icon">
+                <line x1="5" y1="10" x2="15" y2="10" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="1"/>
+              </div>
+              <input
+                type="range"
+                min="0.5"
+                max="5"
+                step="0.1"
+                value={currentSettings.strokeWidth}
+                onChange={(e) => updateSetting('strokeWidth', e.target.value)}
+              />
+              <div className="slider-icon">
+                <line x1="5" y1="10" x2="15" y2="10" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="4"/>
+              </div>
+            </div>
+          </div>
+        </>
+      );
+    } else {
+      // Wave controls
+      return (
+        <>
+          <div className="control-group">
+            <label>Layers</label>
+            <div className="slider-container">
+              <div className="slider-icon">
+                <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M16.5 51C16.5 51 29.1998 59 38.25 59C47.3002 59 52 55.5 60 51C68 46.5 72.6998 43 81.75 43C90.8002 43 103.5 51 103.5 51" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="3" strokeLinecap="round"/>
+                  <path d="M16 68C16 68 28.6998 76 37.75 76C46.8002 76 51.5 72.5 59.5 68C67.5 63.5 72.1998 60 81.25 60C90.3002 60 103 68 103 68" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="3" strokeLinecap="round"/>
+                </svg>
+              </div>
+              <input
+                type="range"
+                min="5"
+                max="60"
+                step="1"
+                value={currentSettings.layers}
+                onChange={(e) => updateSetting('layers', e.target.value)}
+              />
+              <div className="slider-icon">
+                <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M16.5 43C16.5 43 29.1998 51 38.25 51C47.3002 51 52 47.5 60 43C68 38.5 72.6998 35 81.75 35C90.8002 35 103.5 43 103.5 43" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="3" strokeLinecap="round"/>
+                  <path d="M16.5 32C16.5 32 29.1998 40 38.25 40C47.3002 40 52 36.5 60 32C68 27.5 72.6998 24 81.75 24C90.8002 24 103.5 32 103.5 32" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="3" strokeLinecap="round"/>
+                  <path d="M16.5 54C16.5 54 29.1998 62 38.25 62C47.3002 62 52 58.5 60 54C68 49.5 72.6998 46 81.75 46C90.8002 46 103.5 54 103.5 54" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="3" strokeLinecap="round"/>
+                  <path d="M16.5 76C16.5 76 29.1998 84 38.25 84C47.3002 84 52 80.5 60 76C68 71.5 72.6998 68 81.75 68C90.8002 68 103.5 76 103.5 76" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="3" strokeLinecap="round"/>
+                  <path d="M16.5 87C16.5 87 29.1998 95 38.25 95C47.3002 95 52 91.5 60 87C68 82.5 72.6998 79 81.75 79C90.8002 79 103.5 87 103.5 87" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="3" strokeLinecap="round"/>
+                  <path d="M16 65C16 65 28.6998 73 37.75 73C46.8002 73 51.5 69.5 59.5 65C67.5 60.5 72.1998 57 81.25 57C90.3002 57 103 65 103 65" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="3" strokeLinecap="round"/>
+                </svg>
+              </div>
+            </div>
+          </div>
+          <div className="control-group">
+            <label>Amplitude</label>
+            <div className="slider-container">
+              <div className="slider-icon">
+                <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M16.5 60C16.5 60 29.1998 68 38.25 68C47.3002 68 52 64.5 60 60C68 55.5 72.6998 52 81.75 52C90.8002 52 103.5 60 103.5 60" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="5" strokeLinecap="round"/>
+                </svg>
+              </div>
+              <input
+                type="range"
+                min="50"
+                max="300"
+                step="10"
+                value={currentSettings.amplitude}
+                onChange={(e) => updateSetting('amplitude', e.target.value)}
+              />
+              <div className="slider-icon">
+                <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M16.5 60C16.5 60 27.5 92 38.25 92C49 92 56.5 70 60 60C63.5 50 71.5 28 81.75 28C92 28 103.5 60 103.5 60" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="5" strokeLinecap="round"/>
+                </svg>
+              </div>
+            </div>
+          </div>
+          <div className="control-group">
+            <label>Frequency</label>
+            <div className="slider-container">
+              <div className="slider-icon">
+                <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M16.5 60C16.5 60 29.25 59.5 38.5 61.5C47.75 63.5001 50 67 60 67C70 67 71.75 63.5 82 61.5C92.25 59.5 103.5 60 103.5 60" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="5" strokeLinecap="round"/>
+                </svg>
+              </div>
+              <input
+                type="range"
+                min="1"
+                max="5"
+                step="0.5"
+                value={currentSettings.frequency}
+                onChange={(e) => updateSetting('frequency', e.target.value)}
+              />
+              <div className="slider-icon">
+                <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M104 76C104 76 96.0875 71 93.0625 60C91 52.5 89.6938 44 82.125 44C74.5562 44 71.1875 60 71.1875 60C71.1875 60 67.8188 76 60.25 76C52.6812 76 49.3125 60 49.3125 60C49.3125 60 45.9438 44 38.375 44C30.8062 44 29.5 53 27.4375 60C24.0491 71.5 16.5 76 16.5 76" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="5" strokeLinecap="round"/>
+                </svg>
+              </div>
+            </div>
+          </div>
+          <div className="control-group">
+            <label>Width</label>
+            <div className="slider-container">
+              <div className="slider-icon">
+                <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M16.5 60C16.5 60 29.1998 68 38.25 68C47.3002 68 52 64.5 60 60C68 55.5 72.6998 52 81.75 52C90.8002 52 103.5 60 103.5 60" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="2" strokeLinecap="round"/>
+                </svg>
+              </div>
+              <input
+                type="range"
+                min="0.1"
+                max="5"
+                step="0.1"
+                value={currentSettings.strokeWidth}
+                onChange={(e) => updateSetting('strokeWidth', e.target.value)}
+              />
+              <div className="slider-icon">
+                <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M16.5 60C16.5 60 29.1998 68 38.25 68C47.3002 68 52 64.5 60 60C68 55.5 72.6998 52 81.75 52C90.8002 52 103.5 60 103.5 60" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="12" strokeLinecap="round"/>
+                </svg>
+              </div>
+            </div>
+          </div>
+        </>
+      );
+    }
   };
 
   return (
@@ -657,6 +865,24 @@ function App() {
 
       <div className="side-panel">
         <div className="panel-content">
+          <div className="panel-section">
+            <h2>Pattern Type</h2>
+            <div className="pattern-selector">
+              <button 
+                className={`pattern-button ${selectedPattern === 'wave' ? 'active' : ''}`}
+                onClick={() => setSelectedPattern('wave')}
+              >
+                Wave
+              </button>
+              <button 
+                className={`pattern-button ${selectedPattern === 'neurons' ? 'active' : ''}`}
+                onClick={() => setSelectedPattern('neurons')}
+              >
+                Neurons
+              </button>
+            </div>
+          </div>
+
           <div className="panel-section">
             <h2>Canvas Size</h2>
             <div className="size-inputs">
