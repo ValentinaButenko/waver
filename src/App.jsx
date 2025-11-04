@@ -107,8 +107,13 @@ function App() {
         return prev;
       });
     } else if (isDragging) {
-      const deltaX = e.clientX - dragStartX;
-      const deltaY = e.clientY - dragStartY;
+      // Get the scale factor to convert screen space to canvas space
+      const rect = canvasRef.current.getBoundingClientRect();
+      const scaleX = currentSettings.width / rect.width;
+      const scaleY = currentSettings.height / rect.height;
+      
+      const deltaX = (e.clientX - dragStartX) * scaleX;
+      const deltaY = (e.clientY - dragStartY) * scaleY;
       const newVerticalOffset = initialVerticalOffset + deltaY;
       const newHorizontalOffset = initialHorizontalOffset + deltaX;
       
