@@ -142,10 +142,9 @@ function App() {
   };
 
   const generatePattern = () => {
-    // If in drawing mode and no custom path yet, show only background
+    // If in drawing mode and no custom path yet, return empty (background is rendered separately)
     if (isDrawingMode && !useCustomPath) {
-      const background = includeBackground ? `<rect width="100%" height="100%" fill="#${backgroundColor}"/>` : '';
-      return background;
+      return '';
     }
     
     const patternSettings = { 
@@ -156,9 +155,7 @@ function App() {
     
     const pattern = generateWave(patternSettings, wavePhaseOffsets);
     
-    // Add background rectangle if enabled
-    const background = includeBackground ? `<rect width="100%" height="100%" fill="#${backgroundColor}"/>` : '';
-    return background + pattern;
+    return pattern;
   };
 
   const exportSVG = () => {
@@ -325,7 +322,10 @@ function App() {
               height={currentSettings.height}
               xmlns="http://www.w3.org/2000/svg"
             >
-              <g transform={`rotate(${rotation} ${currentSettings.width / 2} ${currentSettings.height / 2})`} style={{ transition: 'transform 0.3s ease' }}>
+              {includeBackground && (
+                <rect width="100%" height="100%" fill={`#${backgroundColor}`} />
+              )}
+              <g transform={`rotate(${rotation} ${currentSettings.width / 2} ${currentSettings.height / 2})`}>
                 <g dangerouslySetInnerHTML={{ __html: generatePattern() }} />
               </g>
             </svg>
