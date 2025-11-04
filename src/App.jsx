@@ -68,6 +68,7 @@ function App() {
     if (isDrawingMode) {
       setIsDrawing(true);
       setCustomPath([]);
+      setUseCustomPath(false); // Clear the previous pattern state
       const rect = canvasRef.current.getBoundingClientRect();
       const scaleX = currentSettings.width / rect.width;
       const scaleY = currentSettings.height / rect.height;
