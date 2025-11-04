@@ -46,7 +46,6 @@
   background: #ffffff;
   border-radius: 12px;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
-  border: 0.2px solid rgba(155, 155, 195, 0.05);
   overflow: hidden;
   position: relative;
   user-select: none;
@@ -496,6 +495,7 @@ select option {
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
   border: 1px solid rgba(255, 255, 255, 0.1);
   align-items: center;
+  height: 60px;
 }
 
 .toolbar-icon-button {

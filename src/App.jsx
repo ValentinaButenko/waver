@@ -23,6 +23,7 @@ const defaultSettings = {
     height: 1040,
     strokeWidth: 1.5,
     color: '#000000',
+    nodeColor: '#000000',
     opacity: 1.0,
     branches: 12,
     depth: 4,
@@ -40,6 +41,7 @@ function App() {
   const [settings, setSettings] = useState(defaultSettings);
   const [backgroundColor, setBackgroundColor] = useState('161616');
   const [fillColor, setFillColor] = useState('4300B0');
+  const [nodeColor, setNodeColor] = useState('4300B0');
   const [isDragging, setIsDragging] = useState(false);
   const [dragStartX, setDragStartX] = useState(0);
   const [dragStartY, setDragStartY] = useState(0);
@@ -47,12 +49,13 @@ function App() {
   const [initialHorizontalOffset, setInitialHorizontalOffset] = useState(0);
   const [includeBackground, setIncludeBackground] = useState(true);
   const [wavePhaseOffsets, setWavePhaseOffsets] = useState([]);
+  const [neuronsSeed, setNeuronsSeed] = useState(Math.random());
   const [isDrawingMode, setIsDrawingMode] = useState(false);
   const [isDrawing, setIsDrawing] = useState(false);
   const [customPath, setCustomPath] = useState([]);
   const [useCustomPath, setUseCustomPath] = useState(false);
   const [showDrawnLine, setShowDrawnLine] = useState(true);
-  const [rotation, setRotation] = useState(0);
+  const [rotation, setRotation] = useState({ wave: 0, neurons: 0 });
   const [patternScale, setPatternScale] = useState(1);
   const [hasDrawnInCurrentSession, setHasDrawnInCurrentSession] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
@@ -75,6 +78,22 @@ function App() {
     currentSettings.strokeWidth,
     currentSettings.layers
     // Note: verticalOffset is NOT in the dependency array
+  ]);
+
+  // Generate new seed when neurons settings change (but not when just dragging)
+  useEffect(() => {
+    if (selectedPattern === 'neurons') {
+      setNeuronsSeed(Math.random());
+    }
+  }, [
+    selectedPattern,
+    currentSettings.branches,
+    currentSettings.depth,
+    currentSettings.spread,
+    currentSettings.curvature,
+    currentSettings.nodeSize,
+    currentSettings.branchProbability
+    // Note: verticalOffset and horizontalOffset are NOT in the dependency array
   ]);
 
   const updateSetting = (key, value) => {
@@ -103,14 +122,9 @@ function App() {
       mouseX -= centerX;
       mouseY -= centerY;
       
-      // Apply inverse rotation
-      const rotationRad = (-rotation * Math.PI) / 180;
-      const rotatedX = mouseX * Math.cos(rotationRad) - mouseY * Math.sin(rotationRad);
-      const rotatedY = mouseX * Math.sin(rotationRad) + mouseY * Math.cos(rotationRad);
-      
-      // Apply inverse scale
-      const scaledX = rotatedX / patternScale;
-      const scaledY = rotatedY / patternScale;
+      // Apply inverse scale (no rotation since drawn line doesn't rotate)
+      const scaledX = mouseX / patternScale;
+      const scaledY = mouseY / patternScale;
       
       // Translate back
       const transformedX = scaledX + centerX;
@@ -181,14 +195,9 @@ function App() {
       mouseX -= centerX;
       mouseY -= centerY;
       
-      // Apply inverse rotation
-      const rotationRad = (-rotation * Math.PI) / 180;
-      const rotatedX = mouseX * Math.cos(rotationRad) - mouseY * Math.sin(rotationRad);
-      const rotatedY = mouseX * Math.sin(rotationRad) + mouseY * Math.cos(rotationRad);
-      
-      // Apply inverse scale
-      const scaledX = rotatedX / patternScale;
-      const scaledY = rotatedY / patternScale;
+      // Apply inverse scale (no rotation since drawn line doesn't rotate)
+      const scaledX = mouseX / patternScale;
+      const scaledY = mouseY / patternScale;
       
       // Translate back
       const transformedX = scaledX + centerX;
@@ -237,10 +246,16 @@ function App() {
       const screenDeltaX = (e.clientX - dragStartX) * scaleX;
       const screenDeltaY = (e.clientY - dragStartY) * scaleY;
       
-      // Apply inverse rotation to deltas so drag feels natural even when pattern is rotated
-      const rotationRad = (-rotation * Math.PI) / 180; // Negative for inverse rotation
-      const deltaX = screenDeltaX * Math.cos(rotationRad) - screenDeltaY * Math.sin(rotationRad);
-      const deltaY = screenDeltaX * Math.sin(rotationRad) + screenDeltaY * Math.cos(rotationRad);
+      let deltaX = screenDeltaX;
+      let deltaY = screenDeltaY;
+      
+      // Apply inverse rotation to deltas only if NOT in drawing mode
+      // (drawn line doesn't rotate, so drag should be direct)
+      if (!isDrawingMode) {
+        const rotationRad = (-rotation[selectedPattern] * Math.PI) / 180;
+        deltaX = screenDeltaX * Math.cos(rotationRad) - screenDeltaY * Math.sin(rotationRad);
+        deltaY = screenDeltaX * Math.sin(rotationRad) + screenDeltaY * Math.cos(rotationRad);
+      }
       
       const newVerticalOffset = initialVerticalOffset + deltaY;
       const newHorizontalOffset = initialHorizontalOffset + deltaX;
@@ -324,7 +339,10 @@ function App() {
   };
 
   const rotatePattern = () => {
-    setRotation((prev) => (prev + 90) % 360);
+    setRotation((prev) => ({
+      ...prev,
+      [selectedPattern]: (prev[selectedPattern] + 90) % 360
+    }));
   };
 
   const handleZoomIn = () => {
@@ -349,13 +367,14 @@ function App() {
       verticalOffset: currentOffsets.vertical,
       horizontalOffset: currentOffsets.horizontal,
       color: `#${fillColor}`,
+      nodeColor: `#${nodeColor}`,
       customPath: useCustomPath ? customPath : null
     };
     
     // Call the appropriate generator based on selected pattern
     let pattern;
     if (selectedPattern === 'neurons') {
-      pattern = generateNeurons(patternSettings);
+      pattern = generateNeurons(patternSettings, neuronsSeed);
     } else {
       pattern = generateWave(patternSettings, wavePhaseOffsets);
     }
@@ -419,9 +438,8 @@ function App() {
             <div className="slider-container">
               <div className="slider-icon">
                 <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <circle cx="60" cy="60" r="3" fill="rgba(255, 255, 255, 0.7)"/>
-                  <line x1="60" y1="60" x2="60" y2="30" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="2"/>
-                  <line x1="60" y1="60" x2="90" y2="60" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="2"/>
+                  <circle cx="60" cy="60" r="6" fill="rgba(255, 255, 255, 0.7)"/>
+                  <path d="M60 60L28 30.5M60 60L91.5 30.5M60 60V99" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="5" strokeLinecap="round"/>
                 </svg>
               </div>
               <input
@@ -434,13 +452,8 @@ function App() {
               />
               <div className="slider-icon">
                 <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <circle cx="60" cy="60" r="3" fill="rgba(255, 255, 255, 0.7)"/>
-                  <line x1="60" y1="60" x2="60" y2="20" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="2"/>
-                  <line x1="60" y1="60" x2="100" y2="60" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="2"/>
-                  <line x1="60" y1="60" x2="60" y2="100" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="2"/>
-                  <line x1="60" y1="60" x2="20" y2="60" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="2"/>
-                  <line x1="60" y1="60" x2="35" y2="35" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="2"/>
-                  <line x1="60" y1="60" x2="85" y2="35" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="2"/>
+                  <circle cx="60" cy="60" r="6" fill="rgba(255, 255, 255, 0.7)"/>
+                  <path d="M60 60L28 30.5M60 60L91.5 30.5M60 60V98M60 60H103M60 60V17M60 60H17M60 60L100 44M60 60L19.5 44M60 60L77.5 20M60 60L42.5 20" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="5" strokeLinecap="round"/>
                 </svg>
               </div>
             </div>
@@ -450,9 +463,8 @@ function App() {
             <div className="slider-container">
               <div className="slider-icon">
                 <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <circle cx="60" cy="60" r="2" fill="rgba(255, 255, 255, 0.7)"/>
-                  <line x1="60" y1="60" x2="60" y2="40" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="2"/>
-                  <circle cx="60" cy="40" r="1.5" fill="rgba(255, 255, 255, 0.7)"/>
+                  <circle cx="60" cy="98" r="6" fill="rgba(255, 255, 255, 0.7)"/>
+                  <path d="M60 98.5V16.5" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="5" strokeLinecap="round"/>
                 </svg>
               </div>
               <input
@@ -465,13 +477,8 @@ function App() {
               />
               <div className="slider-icon">
                 <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <circle cx="60" cy="60" r="2" fill="rgba(255, 255, 255, 0.7)"/>
-                  <line x1="60" y1="60" x2="60" y2="45" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="2"/>
-                  <circle cx="60" cy="45" r="1.5" fill="rgba(255, 255, 255, 0.7)"/>
-                  <line x1="60" y1="45" x2="50" y2="33" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="1.5"/>
-                  <line x1="60" y1="45" x2="70" y2="33" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="1.5"/>
-                  <circle cx="50" cy="33" r="1" fill="rgba(255, 255, 255, 0.7)"/>
-                  <circle cx="70" cy="33" r="1" fill="rgba(255, 255, 255, 0.7)"/>
+                  <circle cx="60" cy="98" r="6" fill="rgba(255, 255, 255, 0.7)"/>
+                  <path d="M60 98.5V60.5M60 60.5L75.25 45M60 60.5L44.5 45M29 29.5L44.5 45M90.5 29.5L75.25 45M75.25 45L73.5 18.5M75.25 45L101 46.5M44.5 45V19.5M44.5 45L18.5 46.5" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="5" strokeLinecap="round"/>
                 </svg>
               </div>
             </div>
@@ -481,9 +488,8 @@ function App() {
             <div className="slider-container">
               <div className="slider-icon">
                 <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <circle cx="60" cy="60" r="2" fill="rgba(255, 255, 255, 0.7)"/>
-                  <line x1="60" y1="60" x2="55" y2="40" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="2"/>
-                  <line x1="60" y1="60" x2="65" y2="40" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="2"/>
+                  <circle cx="60" cy="60" r="6" fill="rgba(255, 255, 255, 0.7)"/>
+                  <path d="M60 60L50.5 18M60 60L69 18M60 60L50.5 101.5M60 60L69 102" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="5" strokeLinecap="round"/>
                 </svg>
               </div>
               <input
@@ -496,19 +502,20 @@ function App() {
               />
               <div className="slider-icon">
                 <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <circle cx="60" cy="60" r="2" fill="rgba(255, 255, 255, 0.7)"/>
-                  <line x1="60" y1="60" x2="40" y2="40" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="2"/>
-                  <line x1="60" y1="60" x2="80" y2="40" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="2"/>
+                  <circle cx="60" cy="60" r="6" fill="rgba(255, 255, 255, 0.7)"/>
+                  <path d="M60 60L28 31.5M60 60L92 31.5M60 60L92 89.5M60 60L28 89.5" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="5" strokeLinecap="round"/>
                 </svg>
               </div>
             </div>
           </div>
           <div className="control-group">
-            <label>Curvature</label>
+            <label>Curve</label>
             <div className="slider-container">
               <div className="slider-icon">
                 <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <line x1="60" y1="80" x2="60" y2="40" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="2"/>
+                  <circle cx="22" cy="60" r="6" transform="rotate(-90 22 60)" fill="rgba(255, 255, 255, 0.7)"/>
+                  <circle cx="98" cy="60" r="6" transform="rotate(-90 98 60)" fill="rgba(255, 255, 255, 0.7)"/>
+                  <path d="M22 60L99 60" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="5" strokeLinecap="round"/>
                 </svg>
               </div>
               <input
@@ -521,7 +528,9 @@ function App() {
               />
               <div className="slider-icon">
                 <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M60 80 Q 45 60 60 40" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="2" fill="none"/>
+                  <circle cx="22" cy="51" r="6" transform="rotate(-90 22 51)" fill="rgba(255, 255, 255, 0.7)"/>
+                  <circle cx="98" cy="51" r="6" transform="rotate(-90 98 51)" fill="rgba(255, 255, 255, 0.7)"/>
+                  <path d="M22 51C22 51 33.5 74 60.5 74C87.5 74 99 51 99 51" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="5" strokeLinecap="round"/>
                 </svg>
               </div>
             </div>
@@ -530,7 +539,9 @@ function App() {
             <label>Node Size</label>
             <div className="slider-container">
               <div className="slider-icon">
-                <circle cx="10" cy="10" r="1.5" fill="rgba(255, 255, 255, 0.7)"/>
+                <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <circle cx="60" cy="60" r="12" fill="rgba(255, 255, 255, 0.7)"/>
+                </svg>
               </div>
               <input
                 type="range"
@@ -541,7 +552,9 @@ function App() {
                 onChange={(e) => updateSetting('nodeSize', e.target.value)}
               />
               <div className="slider-icon">
-                <circle cx="10" cy="10" r="4" fill="rgba(255, 255, 255, 0.7)"/>
+                <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <circle cx="60" cy="60" r="24" fill="rgba(255, 255, 255, 0.7)"/>
+                </svg>
               </div>
             </div>
           </div>
@@ -550,8 +563,8 @@ function App() {
             <div className="slider-container">
               <div className="slider-icon">
                 <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <circle cx="60" cy="60" r="2" fill="rgba(255, 255, 255, 0.7)"/>
-                  <line x1="60" y1="60" x2="60" y2="40" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="2"/>
+                  <circle cx="60" cy="98" r="6" fill="rgba(255, 255, 255, 0.7)"/>
+                  <path d="M60 98.5V57.5M60 57.5L69 16.5M60 57.5L51.5 16.5" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="5" strokeLinecap="round"/>
                 </svg>
               </div>
               <input
@@ -564,32 +577,9 @@ function App() {
               />
               <div className="slider-icon">
                 <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <circle cx="60" cy="60" r="2" fill="rgba(255, 255, 255, 0.7)"/>
-                  <line x1="60" y1="60" x2="60" y2="45" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="2"/>
-                  <line x1="60" y1="45" x2="50" y2="33" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="1.5"/>
-                  <line x1="60" y1="45" x2="70" y2="33" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="1.5"/>
-                  <line x1="50" y1="33" x2="45" y2="23" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="1"/>
-                  <line x1="50" y1="33" x2="55" y2="23" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="1"/>
+                  <circle cx="60" cy="98" r="6" fill="rgba(255, 255, 255, 0.7)"/>
+                  <path d="M60 98.5V57.5M60 98.5L76 60M60 98.5L44 60M60 57.5L69 16.5M60 57.5L51.5 16.5M76 60L98.5 40.5M76 60L90.5 30M76 60L102.5 52.5M44 60L29 30M44 60L22 40.5M44 60L17 52.5" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="5" strokeLinecap="round"/>
                 </svg>
-              </div>
-            </div>
-          </div>
-          <div className="control-group">
-            <label>Line Width</label>
-            <div className="slider-container">
-              <div className="slider-icon">
-                <line x1="5" y1="10" x2="15" y2="10" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="1"/>
-              </div>
-              <input
-                type="range"
-                min="0.5"
-                max="5"
-                step="0.1"
-                value={currentSettings.strokeWidth}
-                onChange={(e) => updateSetting('strokeWidth', e.target.value)}
-              />
-              <div className="slider-icon">
-                <line x1="5" y1="10" x2="15" y2="10" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="4"/>
               </div>
             </div>
           </div>
@@ -604,8 +594,8 @@ function App() {
             <div className="slider-container">
               <div className="slider-icon">
                 <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M16.5 51C16.5 51 29.1998 59 38.25 59C47.3002 59 52 55.5 60 51C68 46.5 72.6998 43 81.75 43C90.8002 43 103.5 51 103.5 51" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="3" strokeLinecap="round"/>
-                  <path d="M16 68C16 68 28.6998 76 37.75 76C46.8002 76 51.5 72.5 59.5 68C67.5 63.5 72.1998 60 81.25 60C90.3002 60 103 68 103 68" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="3" strokeLinecap="round"/>
+                  <path d="M16.5 51C16.5 51 29.1998 59 38.25 59C47.3002 59 52 55.5 60 51C68 46.5 72.6998 43 81.75 43C90.8002 43 103.5 51 103.5 51" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="5" strokeLinecap="round"/>
+                  <path d="M16 68C16 68 28.6998 76 37.75 76C46.8002 76 51.5 72.5 59.5 68C67.5 63.5 72.1998 60 81.25 60C90.3002 60 103 68 103 68" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="5" strokeLinecap="round"/>
                 </svg>
               </div>
               <input
@@ -618,12 +608,12 @@ function App() {
               />
               <div className="slider-icon">
                 <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M16.5 43C16.5 43 29.1998 51 38.25 51C47.3002 51 52 47.5 60 43C68 38.5 72.6998 35 81.75 35C90.8002 35 103.5 43 103.5 43" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="3" strokeLinecap="round"/>
-                  <path d="M16.5 32C16.5 32 29.1998 40 38.25 40C47.3002 40 52 36.5 60 32C68 27.5 72.6998 24 81.75 24C90.8002 24 103.5 32 103.5 32" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="3" strokeLinecap="round"/>
-                  <path d="M16.5 54C16.5 54 29.1998 62 38.25 62C47.3002 62 52 58.5 60 54C68 49.5 72.6998 46 81.75 46C90.8002 46 103.5 54 103.5 54" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="3" strokeLinecap="round"/>
-                  <path d="M16.5 76C16.5 76 29.1998 84 38.25 84C47.3002 84 52 80.5 60 76C68 71.5 72.6998 68 81.75 68C90.8002 68 103.5 76 103.5 76" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="3" strokeLinecap="round"/>
-                  <path d="M16.5 87C16.5 87 29.1998 95 38.25 95C47.3002 95 52 91.5 60 87C68 82.5 72.6998 79 81.75 79C90.8002 79 103.5 87 103.5 87" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="3" strokeLinecap="round"/>
-                  <path d="M16 65C16 65 28.6998 73 37.75 73C46.8002 73 51.5 69.5 59.5 65C67.5 60.5 72.1998 57 81.25 57C90.3002 57 103 65 103 65" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="3" strokeLinecap="round"/>
+                  <path d="M16.5 43C16.5 43 29.1998 51 38.25 51C47.3002 51 52 47.5 60 43C68 38.5 72.6998 35 81.75 35C90.8002 35 103.5 43 103.5 43" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="5" strokeLinecap="round"/>
+                  <path d="M16.5 32C16.5 32 29.1998 40 38.25 40C47.3002 40 52 36.5 60 32C68 27.5 72.6998 24 81.75 24C90.8002 24 103.5 32 103.5 32" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="5" strokeLinecap="round"/>
+                  <path d="M16.5 54C16.5 54 29.1998 62 38.25 62C47.3002 62 52 58.5 60 54C68 49.5 72.6998 46 81.75 46C90.8002 46 103.5 54 103.5 54" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="5" strokeLinecap="round"/>
+                  <path d="M16.5 76C16.5 76 29.1998 84 38.25 84C47.3002 84 52 80.5 60 76C68 71.5 72.6998 68 81.75 68C90.8002 68 103.5 76 103.5 76" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="5" strokeLinecap="round"/>
+                  <path d="M16.5 87C16.5 87 29.1998 95 38.25 95C47.3002 95 52 91.5 60 87C68 82.5 72.6998 79 81.75 79C90.8002 79 103.5 87 103.5 87" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="5" strokeLinecap="round"/>
+                  <path d="M16 65C16 65 28.6998 73 37.75 73C46.8002 73 51.5 69.5 59.5 65C67.5 60.5 72.1998 57 81.25 57C90.3002 57 103 65 103 65" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="5" strokeLinecap="round"/>
                 </svg>
               </div>
             </div>
@@ -679,7 +669,7 @@ function App() {
             <div className="slider-container">
               <div className="slider-icon">
                 <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M16.5 60C16.5 60 29.1998 68 38.25 68C47.3002 68 52 64.5 60 60C68 55.5 72.6998 52 81.75 52C90.8002 52 103.5 60 103.5 60" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="2" strokeLinecap="round"/>
+                  <path d="M16.5 60C16.5 60 29.1998 68 38.25 68C47.3002 68 52 64.5 60 60C68 55.5 72.6998 52 81.75 52C90.8002 52 103.5 60 103.5 60" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="5" strokeLinecap="round"/>
                 </svg>
               </div>
               <input
@@ -692,7 +682,7 @@ function App() {
               />
               <div className="slider-icon">
                 <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M16.5 60C16.5 60 29.1998 68 38.25 68C47.3002 68 52 64.5 60 60C68 55.5 72.6998 52 81.75 52C90.8002 52 103.5 60 103.5 60" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="12" strokeLinecap="round"/>
+                  <path d="M16.5 60C16.5 60 29.1998 68 38.25 68C47.3002 68 52 64.5 60 60C68 55.5 72.6998 52 81.75 52C90.8002 52 103.5 60 103.5 60" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="5" strokeLinecap="round"/>
                 </svg>
               </div>
             </div>
@@ -726,7 +716,7 @@ function App() {
             }}
           >
             <svg
-              key={`wave-${currentSettings.layers}-${rotation}-${patternScale}`}
+              key={`wave-${currentSettings.layers}-${rotation[selectedPattern]}-${patternScale}`}
               ref={svgRef}
               width={currentSettings.width}
               height={currentSettings.height}
@@ -735,7 +725,7 @@ function App() {
               {includeBackground && (
                 <rect width="100%" height="100%" fill={`#${backgroundColor}`} />
               )}
-              <g transform={`translate(${currentSettings.width / 2} ${currentSettings.height / 2}) scale(${patternScale}) rotate(${rotation}) translate(${-currentSettings.width / 2} ${-currentSettings.height / 2})`}>
+              <g transform={`translate(${currentSettings.width / 2} ${currentSettings.height / 2}) scale(${patternScale}) ${!isDrawingMode ? `rotate(${rotation[selectedPattern]})` : ''} translate(${-currentSettings.width / 2} ${-currentSettings.height / 2})`}>
                 <g dangerouslySetInnerHTML={{ __html: generatePattern() }} />
               </g>
             </svg>
@@ -752,7 +742,7 @@ function App() {
                   zIndex: 10
                 }}
               >
-                <g transform={`translate(${currentSettings.width / 2} ${currentSettings.height / 2}) scale(${patternScale}) rotate(${rotation}) translate(${-currentSettings.width / 2} ${-currentSettings.height / 2})`}>
+                <g transform={`translate(${currentSettings.width / 2} ${currentSettings.height / 2}) scale(${patternScale}) translate(${-currentSettings.width / 2} ${-currentSettings.height / 2})`}>
                   <path
                     d={`M ${customPath.map(p => `${p.x + drawingModeOffsets.horizontal} ${p.y + drawingModeOffsets.vertical}`).join(' L ')}`}
                     stroke="#FF0000"
@@ -777,7 +767,7 @@ function App() {
                   zIndex: 11
                 }}
               >
-                <g transform={`translate(${currentSettings.width / 2} ${currentSettings.height / 2}) scale(${patternScale}) rotate(${rotation}) translate(${-currentSettings.width / 2} ${-currentSettings.height / 2})`}>
+                <g transform={`translate(${currentSettings.width / 2} ${currentSettings.height / 2}) scale(${patternScale}) translate(${-currentSettings.width / 2} ${-currentSettings.height / 2})`}>
                   {customPath.map((point, index) => (
                     <circle
                       key={index}
@@ -819,26 +809,30 @@ function App() {
               <MagnifyingGlassMinus size={24} weight="regular" />
             </button>
             
-            <div className="toolbar-divider"></div>
-            
-            <div className="toolbar-segment-control">
-              <button 
-                className={`segment-button ${!isDrawingMode ? 'active' : ''}`}
-                onClick={switchToGenerationMode}
-                title="Generation Mode"
-              >
-                <MagicWand size={24} weight="regular" />
-              </button>
-              <button 
-                className={`segment-button ${isDrawingMode ? 'active' : ''}`}
-                onClick={switchToDrawingMode}
-                title="Drawing Mode"
-              >
-                <div dangerouslySetInnerHTML={{ __html: DrawIcon }} />
-              </button>
-            </div>
+            {selectedPattern !== 'neurons' && (
+              <>
+                <div className="toolbar-divider"></div>
+                
+                <div className="toolbar-segment-control">
+                  <button 
+                    className={`segment-button ${!isDrawingMode ? 'active' : ''}`}
+                    onClick={switchToGenerationMode}
+                    title="Generation Mode"
+                  >
+                    <MagicWand size={24} weight="regular" />
+                  </button>
+                  <button 
+                    className={`segment-button ${isDrawingMode ? 'active' : ''}`}
+                    onClick={switchToDrawingMode}
+                    title="Drawing Mode"
+                  >
+                    <div dangerouslySetInnerHTML={{ __html: DrawIcon }} />
+                  </button>
+                </div>
+              </>
+            )}
 
-            {isDrawingMode && customPath.length > 0 && (
+            {isDrawingMode && customPath.length > 0 && selectedPattern !== 'neurons' && (
               <>
                 <div className="toolbar-divider"></div>
                 
@@ -923,10 +917,17 @@ function App() {
               onToggleVisibility={() => setIncludeBackground(!includeBackground)}
             />
             <CustomColorPicker
-              label="Fill"
+              label="Line"
               color={fillColor}
               onChange={setFillColor}
             />
+            {selectedPattern === 'neurons' && (
+              <CustomColorPicker
+                label="Node"
+                color={nodeColor}
+                onChange={setNodeColor}
+              />
+            )}
           </div>
         </div>
 
