@@ -2,6 +2,8 @@ import { useState, useRef, useEffect } from 'react';
 import './App.css';
 import CustomColorPicker from './CustomColorPicker';
 import { generateWave } from './patternGenerators';
+import { ArrowsCounterClockwise, MagnifyingGlassPlus, MagnifyingGlassMinus, MagicWand, Eraser, PenNib } from 'phosphor-react';
+import DrawIcon from './draw.svg?raw';
 
 const defaultSettings = {
   wave: {
@@ -36,6 +38,10 @@ function App() {
   const [useCustomPath, setUseCustomPath] = useState(false);
   const [showDrawnLine, setShowDrawnLine] = useState(true);
   const [rotation, setRotation] = useState(0);
+  const [patternScale, setPatternScale] = useState(1);
+  const [hasDrawnInCurrentSession, setHasDrawnInCurrentSession] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [draggingNodeIndex, setDraggingNodeIndex] = useState(null);
   const svgRef = useRef(null);
   const canvasRef = useRef(null);
 
@@ -65,17 +71,74 @@ function App() {
   };
 
   const handleMouseDown = (e) => {
-    if (isDrawingMode) {
+    const rect = canvasRef.current.getBoundingClientRect();
+    const scaleX = currentSettings.width / rect.width;
+    const scaleY = currentSettings.height / rect.height;
+    let mouseX = (e.clientX - rect.left) * scaleX;
+    let mouseY = (e.clientY - rect.top) * scaleY;
+
+    if (isDrawingMode && isEditMode && customPath.length > 0) {
+      // Apply inverse transformation to mouse coordinates to match node space
+      const centerX = currentSettings.width / 2;
+      const centerY = currentSettings.height / 2;
+      
+      // Translate to origin
+      mouseX -= centerX;
+      mouseY -= centerY;
+      
+      // Apply inverse rotation
+      const rotationRad = (-rotation * Math.PI) / 180;
+      const rotatedX = mouseX * Math.cos(rotationRad) - mouseY * Math.sin(rotationRad);
+      const rotatedY = mouseX * Math.sin(rotationRad) + mouseY * Math.cos(rotationRad);
+      
+      // Apply inverse scale
+      const scaledX = rotatedX / patternScale;
+      const scaledY = rotatedY / patternScale;
+      
+      // Translate back
+      const transformedX = scaledX + centerX;
+      const transformedY = scaledY + centerY;
+      
+      // Check if clicking on a node (account for offsets)
+      const nodeRadius = 10;
+      const clickedNodeIndex = customPath.findIndex((point) => {
+        const offsetX = point.x + (currentSettings.horizontalOffset || 0);
+        const offsetY = point.y + (currentSettings.verticalOffset || 0);
+        const dx = offsetX - transformedX;
+        const dy = offsetY - transformedY;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        return distance <= nodeRadius;
+      });
+
+      if (clickedNodeIndex !== -1) {
+        // Start dragging a node
+        setDraggingNodeIndex(clickedNodeIndex);
+      } else {
+        // No node clicked, start dragging the pattern
+        setIsDragging(true);
+        setDragStartX(e.clientX);
+        setDragStartY(e.clientY);
+        setInitialVerticalOffset(currentSettings.verticalOffset || 0);
+        setInitialHorizontalOffset(currentSettings.horizontalOffset || 0);
+      }
+    } else if (isDrawingMode && !isEditMode && customPath.length === 0) {
+      // First time drawing or no existing path
       setIsDrawing(true);
       setCustomPath([]);
-      setUseCustomPath(false); // Clear the previous pattern state
-      const rect = canvasRef.current.getBoundingClientRect();
-      const scaleX = currentSettings.width / rect.width;
-      const scaleY = currentSettings.height / rect.height;
-      const x = (e.clientX - rect.left) * scaleX;
-      const y = (e.clientY - rect.top) * scaleY;
+      setUseCustomPath(false);
+      setHasDrawnInCurrentSession(true);
+      const x = mouseX;
+      const y = mouseY;
       setCustomPath([{ x, y }]);
-    } else {
+    } else if (isDrawingMode && !isEditMode && customPath.length > 0) {
+      // Drawing mode with existing pattern - allow dragging
+      setIsDragging(true);
+      setDragStartX(e.clientX);
+      setDragStartY(e.clientY);
+      setInitialVerticalOffset(currentSettings.verticalOffset || 0);
+      setInitialHorizontalOffset(currentSettings.horizontalOffset || 0);
+    } else if (!isDrawingMode) {
+      // Generation mode - allow dragging
       setIsDragging(true);
       setDragStartX(e.clientX);
       setDragStartY(e.clientY);
@@ -86,12 +149,46 @@ function App() {
   };
 
   const handleMouseMove = (e) => {
-    if (isDrawingMode && isDrawing) {
-      const rect = canvasRef.current.getBoundingClientRect();
-      const scaleX = currentSettings.width / rect.width;
-      const scaleY = currentSettings.height / rect.height;
-      const x = (e.clientX - rect.left) * scaleX;
-      const y = (e.clientY - rect.top) * scaleY;
+    const rect = canvasRef.current.getBoundingClientRect();
+    const scaleX = currentSettings.width / rect.width;
+    const scaleY = currentSettings.height / rect.height;
+    let mouseX = (e.clientX - rect.left) * scaleX;
+    let mouseY = (e.clientY - rect.top) * scaleY;
+
+    if (draggingNodeIndex !== null) {
+      // Apply inverse transformation to mouse coordinates to match node space
+      const centerX = currentSettings.width / 2;
+      const centerY = currentSettings.height / 2;
+      
+      // Translate to origin
+      mouseX -= centerX;
+      mouseY -= centerY;
+      
+      // Apply inverse rotation
+      const rotationRad = (-rotation * Math.PI) / 180;
+      const rotatedX = mouseX * Math.cos(rotationRad) - mouseY * Math.sin(rotationRad);
+      const rotatedY = mouseX * Math.sin(rotationRad) + mouseY * Math.cos(rotationRad);
+      
+      // Apply inverse scale
+      const scaledX = rotatedX / patternScale;
+      const scaledY = rotatedY / patternScale;
+      
+      // Translate back
+      const transformedX = scaledX + centerX;
+      const transformedY = scaledY + centerY;
+      
+      // Update the position of the dragged node (remove offset to store original position)
+      setCustomPath(prev => {
+        const newPath = [...prev];
+        newPath[draggingNodeIndex] = { 
+          x: transformedX - (currentSettings.horizontalOffset || 0), 
+          y: transformedY - (currentSettings.verticalOffset || 0) 
+        };
+        return newPath;
+      });
+    } else if (isDrawingMode && isDrawing) {
+      const x = mouseX;
+      const y = mouseY;
       
       // Only add point if it's far enough from the last point (reduces jitter)
       setCustomPath(prev => {
@@ -144,11 +241,14 @@ function App() {
   };
 
   const handleMouseUp = () => {
-    if (isDrawingMode && isDrawing) {
+    if (draggingNodeIndex !== null) {
+      setDraggingNodeIndex(null);
+    } else if (isDrawingMode && isDrawing) {
       setIsDrawing(false);
       // Keep the pattern visible even if path is short
       if (customPath.length > 0) {
         setUseCustomPath(true);
+        setShowDrawnLine(false); // Hide the red line, show only the pattern
       }
     } else {
       setIsDragging(false);
@@ -158,28 +258,61 @@ function App() {
   const handleClearPath = () => {
     setCustomPath([]);
     setUseCustomPath(false);
-    setShowDrawnLine(true); // Reset to show by default
+    setShowDrawnLine(false);
+    setHasDrawnInCurrentSession(false);
+    setIsEditMode(false);
+    setDraggingNodeIndex(null);
   };
 
-  const toggleDrawingMode = () => {
-    const newDrawingMode = !isDrawingMode;
-    setIsDrawingMode(newDrawingMode);
-    
-    if (newDrawingMode) {
-      // Entering drawing mode - clear everything for blank canvas
-      setCustomPath([]);
-      setUseCustomPath(false);
-      setShowDrawnLine(true); // Reset to show by default
-    } else {
-      // Exiting drawing mode - if no path was drawn, return to default pattern
-      if (customPath.length === 0) {
-        setUseCustomPath(false);
+  const toggleEditMode = () => {
+    setIsEditMode((prev) => {
+      const newEditMode = !prev;
+      if (newEditMode) {
+        // Entering edit mode, show the red line for reference
+        setShowDrawnLine(true);
+      } else {
+        // Exiting edit mode, hide the red line and reset dragging
+        setShowDrawnLine(false);
+        setDraggingNodeIndex(null);
       }
+      return newEditMode;
+    });
+  };
+
+  const switchToGenerationMode = () => {
+    setIsDrawingMode(false);
+    setUseCustomPath(false); // Always show generation pattern
+    setHasDrawnInCurrentSession(false); // Reset session flag when switching modes
+    setIsEditMode(false); // Exit edit mode
+    setDraggingNodeIndex(null);
+  };
+
+  const switchToDrawingMode = () => {
+    setIsDrawingMode(true);
+    setHasDrawnInCurrentSession(false); // Reset session flag when entering drawing mode
+    setIsEditMode(false); // Start with edit mode off
+    setDraggingNodeIndex(null);
+    
+    // If there's an existing custom path, show it
+    if (customPath.length > 0) {
+      setUseCustomPath(true);
+      setShowDrawnLine(false); // Show only pattern, not the red line
+    } else {
+      // No previous drawing - show blank canvas
+      setUseCustomPath(false);
     }
   };
 
   const rotatePattern = () => {
     setRotation((prev) => (prev + 90) % 360);
+  };
+
+  const handleZoomIn = () => {
+    setPatternScale((prev) => Math.min(prev * 1.1, 3));
+  };
+
+  const handleZoomOut = () => {
+    setPatternScale((prev) => Math.max(prev * 0.9, 0.3));
   };
 
   const generatePattern = () => {
@@ -349,7 +482,10 @@ function App() {
             onMouseUp={handleMouseUp}
             onMouseLeave={handleMouseUp}
             style={{ 
-              cursor: isDrawingMode ? 'crosshair' : (isDragging ? 'grabbing' : 'grab'),
+              cursor: draggingNodeIndex !== null ? 'grabbing' : 
+                      (isDrawingMode && !isEditMode && customPath.length === 0 ? 'crosshair' : 
+                      (isDrawingMode && isEditMode ? 'pointer' : 
+                      (isDragging ? 'grabbing' : 'grab'))),
               position: 'relative',
               maxWidth: 'calc(100vw - 360px - 120px)',
               maxHeight: 'calc(100vh - 180px)',
@@ -358,7 +494,7 @@ function App() {
             }}
           >
             <svg
-              key={`wave-${currentSettings.layers}-${rotation}`}
+              key={`wave-${currentSettings.layers}-${rotation}-${patternScale}`}
               ref={svgRef}
               width={currentSettings.width}
               height={currentSettings.height}
@@ -367,11 +503,11 @@ function App() {
               {includeBackground && (
                 <rect width="100%" height="100%" fill={`#${backgroundColor}`} />
               )}
-              <g transform={`rotate(${rotation} ${currentSettings.width / 2} ${currentSettings.height / 2})`}>
+              <g transform={`translate(${currentSettings.width / 2} ${currentSettings.height / 2}) scale(${patternScale}) rotate(${rotation}) translate(${-currentSettings.width / 2} ${-currentSettings.height / 2})`}>
                 <g dangerouslySetInnerHTML={{ __html: generatePattern() }} />
               </g>
             </svg>
-            {isDrawingMode && customPath.length > 0 && showDrawnLine && (
+            {isDrawingMode && customPath.length > 0 && (showDrawnLine || isDrawing) && (
               <svg
                 viewBox={`0 0 ${currentSettings.width} ${currentSettings.height}`}
                 style={{
@@ -384,70 +520,110 @@ function App() {
                   zIndex: 10
                 }}
               >
-                <path
-                  d={`M ${customPath.map(p => `${p.x} ${p.y}`).join(' L ')}`}
-                  stroke="#FF0000"
-                  strokeWidth="3"
-                  fill="none"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
+                <g transform={`translate(${currentSettings.width / 2} ${currentSettings.height / 2}) scale(${patternScale}) rotate(${rotation}) translate(${-currentSettings.width / 2} ${-currentSettings.height / 2})`}>
+                  <path
+                    d={`M ${customPath.map(p => `${p.x + (currentSettings.horizontalOffset || 0)} ${p.y + (currentSettings.verticalOffset || 0)}`).join(' L ')}`}
+                    stroke="#FF0000"
+                    strokeWidth="3"
+                    fill="none"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </g>
+              </svg>
+            )}
+            {isDrawingMode && isEditMode && customPath.length > 0 && (
+              <svg
+                viewBox={`0 0 ${currentSettings.width} ${currentSettings.height}`}
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  width: '100%',
+                  height: '100%',
+                  pointerEvents: 'none',
+                  zIndex: 11
+                }}
+              >
+                <g transform={`translate(${currentSettings.width / 2} ${currentSettings.height / 2}) scale(${patternScale}) rotate(${rotation}) translate(${-currentSettings.width / 2} ${-currentSettings.height / 2})`}>
+                  {customPath.map((point, index) => (
+                    <circle
+                      key={index}
+                      cx={point.x + (currentSettings.horizontalOffset || 0)}
+                      cy={point.y + (currentSettings.verticalOffset || 0)}
+                      r={6 / patternScale}
+                      fill="#4DFFDF"
+                      stroke="#FFFFFF"
+                      strokeWidth={1.5 / patternScale}
+                    />
+                  ))}
+                </g>
               </svg>
             )}
           </div>
           
           <div className="floating-toolbar">
             <button 
-              className="toolbar-button"
+              className="toolbar-icon-button"
               onClick={rotatePattern}
               title="Rotate 90°"
             >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M21 12C21 16.9706 16.9706 21 12 21C9.69494 21 7.59227 20.1334 6 18.7083L3 16M3 12C3 7.02944 7.02944 3 12 3C14.3051 3 16.4077 3.86656 18 5.29168L21 8M21 3V8M21 8H16M3 21V16M3 16H8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-              <span>Rotate</span>
+              <ArrowsCounterClockwise size={24} weight="regular" />
             </button>
             
             <button 
-              className={`toolbar-button ${isDrawingMode ? 'active' : ''}`}
-              onClick={toggleDrawingMode}
-              title={isDrawingMode ? 'Exit Drawing Mode' : 'Draw Path'}
+              className="toolbar-icon-button"
+              onClick={handleZoomIn}
+              title="Zoom In"
             >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M12 19L19 12L22 15L15 22L12 19ZM8.5 13.5L4 9L15 3L21 9L15 15M4.5 16.5L9 21M3.5 22.5L6.5 19.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-              <span>{isDrawingMode ? 'Exit Drawing' : 'Draw Path'}</span>
+              <MagnifyingGlassPlus size={24} weight="regular" />
             </button>
+            
+            <button 
+              className="toolbar-icon-button"
+              onClick={handleZoomOut}
+              title="Zoom Out"
+            >
+              <MagnifyingGlassMinus size={24} weight="regular" />
+            </button>
+            
+            <div className="toolbar-divider"></div>
+            
+            <div className="toolbar-segment-control">
+              <button 
+                className={`segment-button ${!isDrawingMode ? 'active' : ''}`}
+                onClick={switchToGenerationMode}
+                title="Generation Mode"
+              >
+                <MagicWand size={24} weight="regular" />
+              </button>
+              <button 
+                className={`segment-button ${isDrawingMode ? 'active' : ''}`}
+                onClick={switchToDrawingMode}
+                title="Drawing Mode"
+              >
+                <div dangerouslySetInnerHTML={{ __html: DrawIcon }} />
+              </button>
+            </div>
 
-            {customPath.length > 0 && (
+            {isDrawingMode && customPath.length > 0 && (
               <>
+                <div className="toolbar-divider"></div>
+                
                 <button 
-                  className="toolbar-button secondary"
+                  className="toolbar-icon-button"
                   onClick={handleClearPath}
-                  title="Clear Path"
+                  title="Erase"
                 >
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
-                  <span>Clear</span>
+                  <Eraser size={24} weight="regular" />
                 </button>
+                
                 <button 
-                  className="toolbar-button secondary"
-                  onClick={() => setShowDrawnLine(!showDrawnLine)}
-                  title={showDrawnLine ? 'Hide drawn line' : 'Show drawn line'}
+                  className={`toolbar-icon-button ${isEditMode ? 'active-icon' : ''}`}
+                  onClick={toggleEditMode}
+                  title="Edit Mode"
                 >
-                  {showDrawnLine ? (
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M1 12C1 12 5 4 12 4C19 4 23 12 23 12C23 12 19 20 12 20C5 20 1 12 1 12Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                      <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                    </svg>
-                  ) : (
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20C5 20 1 12 1 12C1 12 3.35 7.82 7.35 5.38M9.9 4.24A9.12 9.12 0 0 1 12 4C19 4 23 12 23 12C23 12 21.72 14.36 19.68 16.5M14.12 14.12A3 3 0 1 1 9.88 9.88" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                      <line x1="1" y1="1" x2="23" y2="23" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                    </svg>
-                  )}
-                  <span>{showDrawnLine ? 'Hide' : 'Show'}</span>
+                  <PenNib size={24} weight="regular" />
                 </button>
               </>
             )}

@@ -77,22 +77,14 @@ export const generateWave = (settings, phaseOffsets = []) => {
       resampledPath.push({ x, y });
     }
     
-    // Third pass: Calculate smooth spread factor based on curvature
+    // Third pass: Apply dynamic spread factor similar to generated patterns
     for (let i = 0; i < resampledPath.length; i++) {
       const point = resampledPath[i];
+      const t = i / (resampledPath.length - 1);
       
-      // Calculate curvature using surrounding points
-      let spreadFactor = 1.0;
-      if (i > 5 && i < resampledPath.length - 5) {
-        const prev = resampledPath[i - 5];
-        const next = resampledPath[i + 5];
-        const dx = next.x - prev.x;
-        const dy = next.y - prev.y;
-        const distance = Math.sqrt(dx * dx + dy * dy);
-        
-        // More gradual spread based on path straightness
-        spreadFactor = 0.5 + Math.min(distance / 100, 1.5);
-      }
+      // Use the same dramatic spread factor as generated patterns
+      // This creates the characteristic wave effect with gaps and compression
+      const spreadFactor = 0.2 + Math.abs(Math.sin(t * Math.PI * frequency * 2.5)) * 2.5;
       
       rawPoints.push({ x: point.x, y: point.y, spread: spreadFactor });
     }
