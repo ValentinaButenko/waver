@@ -32,6 +32,7 @@ function App() {
   const [customPath, setCustomPath] = useState([]);
   const [useCustomPath, setUseCustomPath] = useState(false);
   const [showDrawnLine, setShowDrawnLine] = useState(true);
+  const [rotation, setRotation] = useState(0);
   const svgRef = useRef(null);
   const canvasRef = useRef(null);
 
@@ -134,6 +135,10 @@ function App() {
         setUseCustomPath(false);
       }
     }
+  };
+
+  const rotatePattern = () => {
+    setRotation((prev) => (prev + 90) % 360);
   };
 
   const generatePattern = () => {
@@ -300,89 +305,114 @@ function App() {
         <div className="app-header">
           <h1>WAVER</h1>
         </div>
-        <div 
-          className="canvas-wrapper"
-          ref={canvasRef}
-          onMouseDown={handleMouseDown}
-          onMouseMove={handleMouseMove}
-          onMouseUp={handleMouseUp}
-          onMouseLeave={handleMouseUp}
-          style={{ 
-            cursor: isDrawingMode ? 'crosshair' : (isDragging ? 'grabbing' : 'grab'),
-            position: 'relative'
-          }}
-        >
-          <svg
-            key={`wave-${currentSettings.layers}`}
-            ref={svgRef}
-            width={currentSettings.width}
-            height={currentSettings.height}
-            xmlns="http://www.w3.org/2000/svg"
-            dangerouslySetInnerHTML={{ __html: generatePattern() }}
-          />
-          {isDrawingMode && customPath.length > 0 && showDrawnLine && (
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '20px' }}>
+          <div 
+            className="canvas-wrapper"
+            ref={canvasRef}
+            onMouseDown={handleMouseDown}
+            onMouseMove={handleMouseMove}
+            onMouseUp={handleMouseUp}
+            onMouseLeave={handleMouseUp}
+            style={{ 
+              cursor: isDrawingMode ? 'crosshair' : (isDragging ? 'grabbing' : 'grab'),
+              position: 'relative',
+              transform: `rotate(${rotation}deg)`,
+              transition: 'transform 0.3s ease'
+            }}
+          >
             <svg
-              style={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                width: currentSettings.width,
-                height: currentSettings.height,
-                pointerEvents: 'none',
-                zIndex: 10
-              }}
+              key={`wave-${currentSettings.layers}`}
+              ref={svgRef}
+              width={currentSettings.width}
+              height={currentSettings.height}
+              xmlns="http://www.w3.org/2000/svg"
+              dangerouslySetInnerHTML={{ __html: generatePattern() }}
+            />
+            {isDrawingMode && customPath.length > 0 && showDrawnLine && (
+              <svg
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  width: currentSettings.width,
+                  height: currentSettings.height,
+                  pointerEvents: 'none',
+                  zIndex: 10
+                }}
+              >
+                <path
+                  d={`M ${customPath.map(p => `${p.x} ${p.y}`).join(' L ')}`}
+                  stroke="#FF0000"
+                  strokeWidth="3"
+                  fill="none"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            )}
+          </div>
+          
+          <div className="floating-toolbar">
+            <button 
+              className="toolbar-button"
+              onClick={rotatePattern}
+              title="Rotate 90°"
             >
-              <path
-                d={`M ${customPath.map(p => `${p.x} ${p.y}`).join(' L ')}`}
-                stroke="#FF0000"
-                strokeWidth="3"
-                fill="none"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          )}
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M21 12C21 16.9706 16.9706 21 12 21C9.69494 21 7.59227 20.1334 6 18.7083L3 16M3 12C3 7.02944 7.02944 3 12 3C14.3051 3 16.4077 3.86656 18 5.29168L21 8M21 3V8M21 8H16M3 21V16M3 16H8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+              <span>Rotate</span>
+            </button>
+            
+            <button 
+              className={`toolbar-button ${isDrawingMode ? 'active' : ''}`}
+              onClick={toggleDrawingMode}
+              title={isDrawingMode ? 'Exit Drawing Mode' : 'Draw Path'}
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 19L19 12L22 15L15 22L12 19ZM8.5 13.5L4 9L15 3L21 9L15 15M4.5 16.5L9 21M3.5 22.5L6.5 19.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+              <span>{isDrawingMode ? 'Exit Drawing' : 'Draw Path'}</span>
+            </button>
+
+            {customPath.length > 0 && (
+              <>
+                <button 
+                  className="toolbar-button secondary"
+                  onClick={handleClearPath}
+                  title="Clear Path"
+                >
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                  <span>Clear</span>
+                </button>
+                <button 
+                  className="toolbar-button secondary"
+                  onClick={() => setShowDrawnLine(!showDrawnLine)}
+                  title={showDrawnLine ? 'Hide drawn line' : 'Show drawn line'}
+                >
+                  {showDrawnLine ? (
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M1 12C1 12 5 4 12 4C19 4 23 12 23 12C23 12 19 20 12 20C5 20 1 12 1 12Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                      <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  ) : (
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20C5 20 1 12 1 12C1 12 3.35 7.82 7.35 5.38M9.9 4.24A9.12 9.12 0 0 1 12 4C19 4 23 12 23 12C23 12 21.72 14.36 19.68 16.5M14.12 14.12A3 3 0 1 1 9.88 9.88" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                      <line x1="1" y1="1" x2="23" y2="23" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                    </svg>
+                  )}
+                  <span>{showDrawnLine ? 'Hide' : 'Show'}</span>
+                </button>
+              </>
+            )}
+          </div>
         </div>
       </div>
 
       <div className="side-panel">
         <div className="panel-content">
-          <div className="panel-section">
-            <h2>Draw Custom Path</h2>
-            <div className="export-buttons">
-              <button 
-                className={`export-button ${isDrawingMode ? 'export-button-secondary' : ''}`}
-                onClick={toggleDrawingMode}
-              >
-                {isDrawingMode ? 'Exit Drawing' : 'Draw Path'}
-              </button>
-              {customPath.length > 0 && (
-                <>
-                  <button 
-                    className="export-button export-button-secondary"
-                    onClick={handleClearPath}
-                  >
-                    Clear
-                  </button>
-                  <button 
-                    className="export-button export-button-secondary"
-                    onClick={() => setShowDrawnLine(!showDrawnLine)}
-                    title={showDrawnLine ? 'Hide drawn line' : 'Show drawn line'}
-                  >
-                    {showDrawnLine ? '👁️' : '👁️‍🗨️'}
-                  </button>
-                </>
-              )}
-            </div>
-            {isDrawingMode && (
-              <p style={{ fontSize: '12px', color: '#888', marginTop: '10px' }}>
-                {useCustomPath 
-                  ? 'Pattern applied! Clear to draw a new path' 
-                  : 'Draw your custom path on the blank canvas'}
-              </p>
-            )}
-          </div>
-
           <div className="panel-section">
             <h2>Canvas Size</h2>
             <div className="size-inputs">
