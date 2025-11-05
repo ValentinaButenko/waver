@@ -1,9 +1,9 @@
 import { useState, useRef, useEffect } from 'react';
 import { HexColorPicker } from 'react-colorful';
-import { Eye, EyeClosed, Plus, Trash } from 'phosphor-react';
+import { Eye, EyeClosed, Plus, Minus } from 'phosphor-react';
 import './CustomColorPicker.css';
 
-const CustomColorPicker = ({ color, onChange, label, showEyeToggle, isVisible, onToggleVisibility, supportsGradient = false }) => {
+const CustomColorPicker = ({ color, onChange, label, showEyeToggle, isVisible, onToggleVisibility, supportsGradient = false, compact = false }) => {
   const [isOpen, setIsOpen] = useState(false);
   const pickerRef = useRef(null);
   const swatchRef = useRef(null);
@@ -13,9 +13,12 @@ const CustomColorPicker = ({ color, onChange, label, showEyeToggle, isVisible, o
   const [mode, setMode] = useState(colorData.type || 'solid');
   const [solidColor, setSolidColor] = useState(colorData.type === 'solid' ? colorData.value : '4300B0');
   const [gradientStops, setGradientStops] = useState(
-    (colorData.type === 'linear' || colorData.type === 'radial') ? colorData.stops : [
-      { color: '4300B0', position: 0 },
-      { color: 'FF00FF', position: 100 }
+    (colorData.type === 'linear' || colorData.type === 'radial') ? colorData.stops.map(s => ({
+      ...s,
+      opacity: s.opacity !== undefined ? s.opacity : 100
+    })) : [
+      { color: '4300B0', position: 0, opacity: 100 },
+      { color: 'FF00FF', position: 100, opacity: 100 }
     ]
   );
   const [gradientAngle, setGradientAngle] = useState(
@@ -35,7 +38,10 @@ const CustomColorPicker = ({ color, onChange, label, showEyeToggle, isVisible, o
       setSolidColor(newColorData.value);
       setInputValue(newColorData.value);
     } else if (newColorData.type === 'linear' || newColorData.type === 'radial') {
-      setGradientStops(newColorData.stops);
+      setGradientStops(newColorData.stops.map(s => ({
+        ...s,
+        opacity: s.opacity !== undefined ? s.opacity : 100
+      })));
       setGradientAngle(newColorData.angle || 90);
       setGradientType(newColorData.type === 'radial' ? 'radial' : 'linear');
     }
@@ -104,10 +110,29 @@ const CustomColorPicker = ({ color, onChange, label, showEyeToggle, isVisible, o
   };
 
   const handleStopPositionChange = (index, newPosition) => {
+    const position = Math.max(0, Math.min(100, parseInt(newPosition) || 0));
     const newStops = [...gradientStops];
-    newStops[index] = { ...newStops[index], position: Math.max(0, Math.min(100, newPosition)) };
+    newStops[index] = { ...newStops[index], position };
     // Sort stops by position
     newStops.sort((a, b) => a.position - b.position);
+    setGradientStops(newStops);
+    notifyChange(mode, solidColor, newStops, gradientAngle, gradientType);
+  };
+
+  const handleStopColorInputChange = (index, value) => {
+    const hexValue = value.replace(/[^0-9A-Fa-f]/g, '').toUpperCase().slice(0, 6);
+    const newStops = [...gradientStops];
+    newStops[index] = { ...newStops[index], color: hexValue };
+    setGradientStops(newStops);
+    if (hexValue.length === 6) {
+      notifyChange(mode, solidColor, newStops, gradientAngle, gradientType);
+    }
+  };
+
+  const handleStopOpacityChange = (index, value) => {
+    const opacity = Math.max(0, Math.min(100, parseInt(value) || 0));
+    const newStops = [...gradientStops];
+    newStops[index] = { ...newStops[index], opacity };
     setGradientStops(newStops);
     notifyChange(mode, solidColor, newStops, gradientAngle, gradientType);
   };
@@ -115,7 +140,8 @@ const CustomColorPicker = ({ color, onChange, label, showEyeToggle, isVisible, o
   const addGradientStop = () => {
     const newPosition = 50;
     const newColor = gradientStops.length > 0 ? gradientStops[0].color : '4300B0';
-    const newStops = [...gradientStops, { color: newColor, position: newPosition }];
+    const newOpacity = gradientStops.length > 0 ? gradientStops[0].opacity : 100;
+    const newStops = [...gradientStops, { color: newColor, position: newPosition, opacity: newOpacity }];
     newStops.sort((a, b) => a.position - b.position);
     setGradientStops(newStops);
     notifyChange(mode, solidColor, newStops, gradientAngle, gradientType);
@@ -139,10 +165,16 @@ const CustomColorPicker = ({ color, onChange, label, showEyeToggle, isVisible, o
     if (mode === 'solid') {
       return { backgroundColor: `#${solidColor}` };
     } else if (mode === 'radial') {
-      const stops = gradientStops.map(s => `#${s.color} ${s.position}%`).join(', ');
+      const stops = gradientStops.map(s => {
+        const opacity = (s.opacity !== undefined ? s.opacity : 100) / 100;
+        return `rgba(${parseInt(s.color.substring(0, 2), 16)}, ${parseInt(s.color.substring(2, 4), 16)}, ${parseInt(s.color.substring(4, 6), 16)}, ${opacity}) ${s.position}%`;
+      }).join(', ');
       return { background: `radial-gradient(circle, ${stops})` };
     } else {
-      const stops = gradientStops.map(s => `#${s.color} ${s.position}%`).join(', ');
+      const stops = gradientStops.map(s => {
+        const opacity = (s.opacity !== undefined ? s.opacity : 100) / 100;
+        return `rgba(${parseInt(s.color.substring(0, 2), 16)}, ${parseInt(s.color.substring(2, 4), 16)}, ${parseInt(s.color.substring(4, 6), 16)}, ${opacity}) ${s.position}%`;
+      }).join(', ');
       return { background: `linear-gradient(${gradientAngle}deg, ${stops})` };
     }
   };
@@ -188,8 +220,8 @@ const CustomColorPicker = ({ color, onChange, label, showEyeToggle, isVisible, o
   };
 
   return (
-    <div className="control-group">
-      <label>{label}</label>
+    <div className={compact ? "" : "control-group"}>
+      {!compact && <label>{label}</label>}
       <div className="color-input-group">
         <div className="color-swatch-wrapper" ref={swatchRef}>
           <div 
@@ -231,35 +263,53 @@ const CustomColorPicker = ({ color, onChange, label, showEyeToggle, isVisible, o
                         onClick={addGradientStop}
                         title="Add color stop"
                       >
-                        <Plus size={16} weight="bold" />
+                        <Plus size={16} weight="regular" />
                       </button>
                     </div>
                     
                     {gradientStops.map((stop, index) => (
                       <div key={index} className="gradient-stop-item">
+                        <div className="stop-position-input-wrapper">
+                          <div className="input-with-label">
+                            <input
+                              type="number"
+                              className="size-input stop-position-input"
+                              value={stop.position}
+                              onChange={(e) => handleStopPositionChange(index, e.target.value)}
+                              min="0"
+                              max="100"
+                            />
+                            <span className="input-marker position-marker">%</span>
+                          </div>
+                        </div>
                         <div 
                           className="stop-color-swatch"
                           style={{ backgroundColor: `#${stop.color}` }}
                           onClick={() => setEditingStopIndex(index)}
                         />
-                        <input 
-                          type="range" 
-                          min="0" 
-                          max="100" 
-                          value={stop.position}
-                          onChange={(e) => handleStopPositionChange(index, parseInt(e.target.value))}
-                          className="stop-position-slider"
-                        />
-                        <span className="stop-position-value">{stop.position}%</span>
-                        {gradientStops.length > 2 && (
-                          <button 
-                            className="remove-stop-button"
-                            onClick={() => removeGradientStop(index)}
-                            title="Remove stop"
-                          >
-                            <Trash size={16} weight="regular" />
-                          </button>
-                        )}
+                        <div className="stop-color-input-wrapper">
+                          <div className="input-with-label">
+                            <span className="input-marker">#</span>
+                            <input
+                              type="text"
+                              className="size-input stop-hex-input"
+                              value={stop.color}
+                              onChange={(e) => handleStopColorInputChange(index, e.target.value)}
+                              maxLength="6"
+                              placeholder="0066FF"
+                              style={{ textTransform: 'uppercase' }}
+                            />
+                          </div>
+                        </div>
+                        {/* Opacity input removed per request */}
+                        <button 
+                          className="remove-stop-button"
+                          onClick={() => removeGradientStop(index)}
+                          title="Remove stop"
+                          disabled={gradientStops.length <= 2}
+                        >
+                          <Minus size={16} weight="regular" />
+                        </button>
                       </div>
                     ))}
                   </div>

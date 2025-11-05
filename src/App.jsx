@@ -77,9 +77,10 @@ function App() {
     const maxDimension = Math.max(width, height);
     
     if (backgroundColor.type === 'linear' || backgroundColor.type === 'radial') {
-      const stops = backgroundColor.stops.map(s => 
-        `<stop offset="${s.position}%" stop-color="#${s.color}" />`
-      ).join('');
+      const stops = backgroundColor.stops.map(s => {
+        const opacity = s.opacity !== undefined ? s.opacity / 100 : 1;
+        return `<stop offset="${s.position}%" stop-color="#${s.color}" stop-opacity="${opacity}" />`;
+      }).join('');
       if (backgroundColor.type === 'radial') {
         defs += `<radialGradient id="bg-gradient" cx="${centerX}" cy="${centerY}" r="${maxDimension / 2}" gradientUnits="userSpaceOnUse">
           ${stops}
@@ -97,9 +98,10 @@ function App() {
     }
     
     if (fillColor.type === 'linear' || fillColor.type === 'radial') {
-      const stops = fillColor.stops.map(s => 
-        `<stop offset="${s.position}%" stop-color="#${s.color}" />`
-      ).join('');
+      const stops = fillColor.stops.map(s => {
+        const opacity = s.opacity !== undefined ? s.opacity / 100 : 1;
+        return `<stop offset="${s.position}%" stop-color="#${s.color}" stop-opacity="${opacity}" />`;
+      }).join('');
       if (fillColor.type === 'radial') {
         defs += `<radialGradient id="line-gradient" cx="${centerX}" cy="${centerY}" r="${maxDimension / 2}" gradientUnits="userSpaceOnUse">
           ${stops}
@@ -117,9 +119,10 @@ function App() {
     }
     
     if (nodeColor.type === 'linear' || nodeColor.type === 'radial') {
-      const stops = nodeColor.stops.map(s => 
-        `<stop offset="${s.position}%" stop-color="#${s.color}" />`
-      ).join('');
+      const stops = nodeColor.stops.map(s => {
+        const opacity = s.opacity !== undefined ? s.opacity / 100 : 1;
+        return `<stop offset="${s.position}%" stop-color="#${s.color}" stop-opacity="${opacity}" />`;
+      }).join('');
       if (nodeColor.type === 'radial') {
         defs += `<radialGradient id="node-gradient" cx="${centerX}" cy="${centerY}" r="${maxDimension / 2}" gradientUnits="userSpaceOnUse">
           ${stops}

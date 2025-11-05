@@ -8,7 +8,7 @@
   border-radius: 8px;
   padding: 16px;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
-  min-width: 232px;
+  min-width: 280px;
 }
 
 /* Mode selector - 3 options horizontal layout */
@@ -54,7 +54,7 @@
 
 /* Style the react-colorful picker */
 .color-picker-popup .react-colorful {
-  width: 200px;
+  width: 100%;
   height: 200px;
 }
 
@@ -185,11 +185,75 @@
   display: flex;
   align-items: center;
   gap: 8px;
+  flex-wrap: nowrap;
+}
+
+.stop-color-input-wrapper {
+  width: 100px;
+  flex-shrink: 0;
+}
+
+.stop-opacity-input-wrapper {
+  width: 70px;
+  flex-shrink: 0;
+}
+
+.stop-hex-input,
+.stop-opacity-input {
+  width: 100%;
+  padding: 8px 10px 8px 32px !important;
+  font-size: 12px !important;
+  font-weight: 500;
+  border: 2px solid transparent !important;
+  border-radius: 8px;
+  background: var(--blue-01) !important;
+  color: #FFFFFF;
+  font-family: 'GT Welsheim Pro', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.stop-position-input {
+  width: 100%;
+  padding: 8px 32px 8px 10px !important;
+  font-size: 12px !important;
+  font-weight: 500;
+  border: 2px solid transparent !important;
+  border-radius: 8px;
+  background: var(--blue-01) !important;
+  color: #FFFFFF;
+  font-family: 'GT Welsheim Pro', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.stop-hex-input:hover,
+.stop-position-input:hover,
+.stop-opacity-input:hover {
+  background: var(--blue-02) !important;
+  border: 2px solid var(--blue-03) !important;
+}
+
+.stop-hex-input:focus,
+.stop-position-input:focus,
+.stop-opacity-input:focus {
+  background: var(--blue-02) !important;
+  border: 2px solid transparent !important;
+}
+
+.stop-position-input-wrapper {
+  width: 70px;
+  flex-shrink: 0;
+}
+
+.position-marker {
+  left: auto;
+  right: 10px;
 }
 
 .stop-color-swatch {
-  width: 24px;
-  height: 24px;
+  width: 32px;
+  height: 32px;
   border-radius: 4px;
   border: 2px solid var(--blue-03);
   cursor: pointer;
@@ -232,7 +296,7 @@
 }
 
 .stop-position-value {
-  font-size: 11px;
+  font-size: 12px;
   color: rgba(255, 255, 255, 0.6);
   min-width: 32px;
   text-align: right;
@@ -250,8 +314,13 @@
   transition: color 0.2s ease;
 }
 
-.remove-stop-button:hover {
+.remove-stop-button:hover:not(:disabled) {
   color: rgba(255, 100, 100, 0.8);
+}
+
+.remove-stop-button:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
 }
 
 .stop-color-picker {
