@@ -70,17 +70,27 @@ function App() {
   // Helper function to generate SVG gradient definitions
   const generateGradientDefs = () => {
     let defs = '';
+    const width = currentSettings.width;
+    const height = currentSettings.height;
+    const centerX = width / 2;
+    const centerY = height / 2;
+    const maxDimension = Math.max(width, height);
     
     if (backgroundColor.type === 'linear' || backgroundColor.type === 'radial') {
       const stops = backgroundColor.stops.map(s => 
         `<stop offset="${s.position}%" stop-color="#${s.color}" />`
       ).join('');
       if (backgroundColor.type === 'radial') {
-        defs += `<radialGradient id="bg-gradient" cx="50%" cy="50%" r="50%">
+        defs += `<radialGradient id="bg-gradient" cx="${centerX}" cy="${centerY}" r="${maxDimension / 2}" gradientUnits="userSpaceOnUse">
           ${stops}
         </radialGradient>`;
       } else {
-        defs += `<linearGradient id="bg-gradient" x1="0%" y1="0%" x2="100%" y2="0%" gradientTransform="rotate(${backgroundColor.angle || 90} 0.5 0.5)">
+        const angle = (backgroundColor.angle || 90) * Math.PI / 180;
+        const x1 = centerX - Math.cos(angle) * maxDimension / 2;
+        const y1 = centerY - Math.sin(angle) * maxDimension / 2;
+        const x2 = centerX + Math.cos(angle) * maxDimension / 2;
+        const y2 = centerY + Math.sin(angle) * maxDimension / 2;
+        defs += `<linearGradient id="bg-gradient" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" gradientUnits="userSpaceOnUse">
           ${stops}
         </linearGradient>`;
       }
@@ -91,11 +101,16 @@ function App() {
         `<stop offset="${s.position}%" stop-color="#${s.color}" />`
       ).join('');
       if (fillColor.type === 'radial') {
-        defs += `<radialGradient id="line-gradient" cx="50%" cy="50%" r="50%">
+        defs += `<radialGradient id="line-gradient" cx="${centerX}" cy="${centerY}" r="${maxDimension / 2}" gradientUnits="userSpaceOnUse">
           ${stops}
         </radialGradient>`;
       } else {
-        defs += `<linearGradient id="line-gradient" x1="0%" y1="0%" x2="100%" y2="0%" gradientTransform="rotate(${fillColor.angle || 90} 0.5 0.5)">
+        const angle = (fillColor.angle || 90) * Math.PI / 180;
+        const x1 = centerX - Math.cos(angle) * maxDimension / 2;
+        const y1 = centerY - Math.sin(angle) * maxDimension / 2;
+        const x2 = centerX + Math.cos(angle) * maxDimension / 2;
+        const y2 = centerY + Math.sin(angle) * maxDimension / 2;
+        defs += `<linearGradient id="line-gradient" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" gradientUnits="userSpaceOnUse">
           ${stops}
         </linearGradient>`;
       }
@@ -106,11 +121,16 @@ function App() {
         `<stop offset="${s.position}%" stop-color="#${s.color}" />`
       ).join('');
       if (nodeColor.type === 'radial') {
-        defs += `<radialGradient id="node-gradient" cx="50%" cy="50%" r="50%">
+        defs += `<radialGradient id="node-gradient" cx="${centerX}" cy="${centerY}" r="${maxDimension / 2}" gradientUnits="userSpaceOnUse">
           ${stops}
         </radialGradient>`;
       } else {
-        defs += `<linearGradient id="node-gradient" x1="0%" y1="0%" x2="100%" y2="0%" gradientTransform="rotate(${nodeColor.angle || 90} 0.5 0.5)">
+        const angle = (nodeColor.angle || 90) * Math.PI / 180;
+        const x1 = centerX - Math.cos(angle) * maxDimension / 2;
+        const y1 = centerY - Math.sin(angle) * maxDimension / 2;
+        const x2 = centerX + Math.cos(angle) * maxDimension / 2;
+        const y2 = centerY + Math.sin(angle) * maxDimension / 2;
+        defs += `<linearGradient id="node-gradient" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" gradientUnits="userSpaceOnUse">
           ${stops}
         </linearGradient>`;
       }
