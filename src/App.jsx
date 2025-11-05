@@ -39,9 +39,9 @@ const defaultSettings = {
 function App() {
   const [selectedPattern, setSelectedPattern] = useState('wave');
   const [settings, setSettings] = useState(defaultSettings);
-  const [backgroundColor, setBackgroundColor] = useState('161616');
-  const [fillColor, setFillColor] = useState('4300B0');
-  const [nodeColor, setNodeColor] = useState('4300B0');
+  const [backgroundColor, setBackgroundColor] = useState({ type: 'solid', value: '161616' });
+  const [fillColor, setFillColor] = useState({ type: 'solid', value: '4300B0' });
+  const [nodeColor, setNodeColor] = useState({ type: 'solid', value: '4300B0' });
   const [isDragging, setIsDragging] = useState(false);
   const [dragStartX, setDragStartX] = useState(0);
   const [dragStartY, setDragStartY] = useState(0);
@@ -66,6 +66,66 @@ function App() {
   const canvasRef = useRef(null);
 
   const currentSettings = settings[selectedPattern];
+
+  // Helper function to generate SVG gradient definitions
+  const generateGradientDefs = () => {
+    let defs = '';
+    
+    if (backgroundColor.type === 'linear' || backgroundColor.type === 'radial') {
+      const stops = backgroundColor.stops.map(s => 
+        `<stop offset="${s.position}%" stop-color="#${s.color}" />`
+      ).join('');
+      if (backgroundColor.type === 'radial') {
+        defs += `<radialGradient id="bg-gradient" cx="50%" cy="50%" r="50%">
+          ${stops}
+        </radialGradient>`;
+      } else {
+        defs += `<linearGradient id="bg-gradient" x1="0%" y1="0%" x2="100%" y2="0%" gradientTransform="rotate(${backgroundColor.angle || 90} 0.5 0.5)">
+          ${stops}
+        </linearGradient>`;
+      }
+    }
+    
+    if (fillColor.type === 'linear' || fillColor.type === 'radial') {
+      const stops = fillColor.stops.map(s => 
+        `<stop offset="${s.position}%" stop-color="#${s.color}" />`
+      ).join('');
+      if (fillColor.type === 'radial') {
+        defs += `<radialGradient id="line-gradient" cx="50%" cy="50%" r="50%">
+          ${stops}
+        </radialGradient>`;
+      } else {
+        defs += `<linearGradient id="line-gradient" x1="0%" y1="0%" x2="100%" y2="0%" gradientTransform="rotate(${fillColor.angle || 90} 0.5 0.5)">
+          ${stops}
+        </linearGradient>`;
+      }
+    }
+    
+    if (nodeColor.type === 'linear' || nodeColor.type === 'radial') {
+      const stops = nodeColor.stops.map(s => 
+        `<stop offset="${s.position}%" stop-color="#${s.color}" />`
+      ).join('');
+      if (nodeColor.type === 'radial') {
+        defs += `<radialGradient id="node-gradient" cx="50%" cy="50%" r="50%">
+          ${stops}
+        </radialGradient>`;
+      } else {
+        defs += `<linearGradient id="node-gradient" x1="0%" y1="0%" x2="100%" y2="0%" gradientTransform="rotate(${nodeColor.angle || 90} 0.5 0.5)">
+          ${stops}
+        </linearGradient>`;
+      }
+    }
+    
+    return defs ? `<defs>${defs}</defs>` : '';
+  };
+
+  // Helper function to get color reference for SVG
+  const getColorRef = (colorData, gradientId) => {
+    if (colorData.type === 'linear' || colorData.type === 'radial') {
+      return `url(#${gradientId})`;
+    }
+    return `#${colorData.value}`;
+  };
 
   // Generate phase offsets when wave settings change (but not when just dragging)
   useEffect(() => {
@@ -366,8 +426,8 @@ function App() {
       ...currentSettings,
       verticalOffset: currentOffsets.vertical,
       horizontalOffset: currentOffsets.horizontal,
-      color: `#${fillColor}`,
-      nodeColor: `#${nodeColor}`,
+      color: getColorRef(fillColor, 'line-gradient'),
+      nodeColor: getColorRef(nodeColor, 'node-gradient'),
       customPath: useCustomPath ? customPath : null
     };
     
@@ -409,10 +469,7 @@ function App() {
     const url = URL.createObjectURL(blob);
     
     img.onload = () => {
-      if (includeBackground) {
-        ctx.fillStyle = `#${backgroundColor}`;
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-      }
+      // Background is now handled in SVG, so we can just draw the image
       ctx.drawImage(img, 0, 0);
       
       canvas.toBlob((blob) => {
@@ -722,8 +779,9 @@ function App() {
               height={currentSettings.height}
               xmlns="http://www.w3.org/2000/svg"
             >
+              <g dangerouslySetInnerHTML={{ __html: generateGradientDefs() }} />
               {includeBackground && (
-                <rect width="100%" height="100%" fill={`#${backgroundColor}`} />
+                <rect width="100%" height="100%" fill={getColorRef(backgroundColor, 'bg-gradient')} />
               )}
               <g transform={`translate(${currentSettings.width / 2} ${currentSettings.height / 2}) scale(${patternScale}) ${!isDrawingMode ? `rotate(${rotation[selectedPattern]})` : ''} translate(${-currentSettings.width / 2} ${-currentSettings.height / 2})`}>
                 <g dangerouslySetInnerHTML={{ __html: generatePattern() }} />
@@ -915,17 +973,20 @@ function App() {
               showEyeToggle={true}
               isVisible={includeBackground}
               onToggleVisibility={() => setIncludeBackground(!includeBackground)}
+              supportsGradient={false}
             />
             <CustomColorPicker
               label="Line"
               color={fillColor}
               onChange={setFillColor}
+              supportsGradient={true}
             />
             {selectedPattern === 'neurons' && (
               <CustomColorPicker
                 label="Node"
                 color={nodeColor}
                 onChange={setNodeColor}
+                supportsGradient={false}
               />
             )}
           </div>
