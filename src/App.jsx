@@ -45,7 +45,10 @@ const defaultSettings = {
     R: 120,
     r: 45,
     d: 80,
+    depth: 50,
     rotation: 0,
+    rotateX: 0,
+    rotateY: 0,
     scale: 1.0,
     verticalOffset: 0,
     horizontalOffset: 0
@@ -601,7 +604,7 @@ function App() {
             <div className="slider-container">
               <div className="slider-icon">
                 <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <circle cx="60" cy="60" r="45" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="4" fill="none"/>
+                  <circle cx="60" cy="60" r="45" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="5" fill="none"/>
                   <circle cx="60" cy="80" r="15" fill="rgba(255, 255, 255, 0.7)"/>
                 </svg>
               </div>
@@ -615,7 +618,7 @@ function App() {
               />
               <div className="slider-icon">
                 <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <circle cx="60" cy="60" r="45" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="4" fill="none"/>
+                  <circle cx="60" cy="60" r="45" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="5" fill="none"/>
                   <circle cx="60" cy="85" r="30" fill="rgba(255, 255, 255, 0.7)"/>
                 </svg>
               </div>
@@ -626,9 +629,7 @@ function App() {
             <div className="slider-container">
               <div className="slider-icon">
                 <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <circle cx="60" cy="60" r="40" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="5" fill="none"/>
-                  <circle cx="60" cy="60" r="5" fill="rgba(255, 255, 255, 0.7)"/>
-                  <circle cx="60" cy="75" r="5" fill="rgba(255, 255, 255, 0.7)"/>
+                  <path d="M60 29.5C76.8447 29.5 90.5 43.1553 90.5 60C90.5 76.8447 76.8447 90.5 60 90.5C43.1553 90.5 29.5 76.8447 29.5 60C29.5 43.1553 43.1553 29.5 60 29.5Z" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="5"/>
                 </svg>
               </div>
               <input
@@ -641,9 +642,7 @@ function App() {
               />
               <div className="slider-icon">
                 <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <circle cx="60" cy="60" r="40" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="5" fill="none"/>
-                  <circle cx="60" cy="60" r="5" fill="rgba(255, 255, 255, 0.7)"/>
-                  <circle cx="60" cy="95" r="5" fill="rgba(255, 255, 255, 0.7)"/>
+                  <path d="M60 38C72.1503 38 82 47.8497 82 60C82 72.1503 72.1503 82 60 82C47.8497 82 38 72.1503 38 60C38 47.8497 47.8497 38 60 38Z" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="20"/>
                 </svg>
               </div>
             </div>
@@ -959,7 +958,7 @@ function App() {
             }}
           >
             <svg
-              key={`wave-${currentSettings.layers}-${rotation[selectedPattern]}-${patternScale}`}
+              key={`${selectedPattern}-${currentSettings.layers}-${rotation[selectedPattern]}-${patternScale}-${currentSettings.rotateX || 0}-${currentSettings.rotateY || 0}-${currentSettings.depth || 50}`}
               ref={svgRef}
               width={currentSettings.width}
               height={currentSettings.height}
@@ -1185,9 +1184,90 @@ function App() {
         </div>
 
           <div className="panel-section">
-            <h2>Settings</h2>
+            <h2>Shape</h2>
             {renderControls()}
           </div>
+
+          {selectedPattern === 'spirograph' && (
+            <div className="panel-section">
+              <h2>Position</h2>
+              <div className="control-group">
+                <label>Depth</label>
+                <div className="slider-container">
+                  <div className="slider-icon">
+                    <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M63 37.5C77.6355 37.5 89.5 49.3645 89.5 64C89.5 78.6355 77.6355 90.5 63 90.5C48.3645 90.5 36.5 78.6355 36.5 64C36.5 49.3645 48.3645 37.5 63 37.5Z" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="5"/>
+                      <path d="M56 29.5C70.6355 29.5 82.5 41.3645 82.5 56C82.5 70.6355 70.6355 82.5 56 82.5C41.3645 82.5 29.5 70.6355 29.5 56C29.5 41.3645 41.3645 29.5 56 29.5Z" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="5"/>
+                    </svg>
+                  </div>
+                  <input
+                    type="range"
+                    min="10"
+                    max="100"
+                    step="5"
+                    value={currentSettings.depth}
+                    onChange={(e) => updateSetting('depth', e.target.value)}
+                  />
+                  <div className="slider-icon">
+                    <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M43.5 17.5C57.8594 17.5 69.5 29.1406 69.5 43.5C69.5 57.8594 57.8594 69.5 43.5 69.5C29.1406 69.5 17.5 57.8594 17.5 43.5C17.5 29.1406 29.1406 17.5 43.5 17.5Z" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="5"/>
+                      <path d="M76 49.5C90.6355 49.5 102.5 61.3645 102.5 76C102.5 90.6355 90.6355 102.5 76 102.5C61.3645 102.5 49.5 90.6355 49.5 76C49.5 61.3645 61.3645 49.5 76 49.5Z" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="5"/>
+                    </svg>
+                  </div>
+                </div>
+              </div>
+              <div className="control-group">
+                <label>Rotate X</label>
+                <div className="slider-container">
+                  <div className="slider-icon">
+                    <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M22 59C22 59 33.5 82 60.5 82C87.5 82 99 59 99 59" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="5" strokeLinecap="round"/>
+                      <path d="M60 98.5V16.5" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="5" strokeLinecap="round"/>
+                    </svg>
+                  </div>
+                  <input
+                    type="range"
+                    min="-90"
+                    max="90"
+                    step="5"
+                    value={currentSettings.rotateX}
+                    onChange={(e) => updateSetting('rotateX', e.target.value)}
+                  />
+                  <div className="slider-icon">
+                    <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M22 61C22 61 33.5 38 60.5 38C87.5 38 99 61 99 61" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="5" strokeLinecap="round"/>
+                      <path d="M60 98.5V16.5" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="5" strokeLinecap="round"/>
+                    </svg>
+                  </div>
+                </div>
+              </div>
+              <div className="control-group">
+                <label>Rotate Y</label>
+                <div className="slider-container">
+                  <div className="slider-icon">
+                    <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M61 22C61 22 38 33.5 38 60.5C38 87.5 61 99 61 99" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="5" strokeLinecap="round"/>
+                      <path d="M101 57.5L19 57.5" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="5" strokeLinecap="round"/>
+                    </svg>
+                  </div>
+                  <input
+                    type="range"
+                    min="-90"
+                    max="90"
+                    step="5"
+                    value={currentSettings.rotateY}
+                    onChange={(e) => updateSetting('rotateY', e.target.value)}
+                  />
+                  <div className="slider-icon">
+                    <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M59 22C59 22 82 33.5 82 60.5C82 87.5 59 99 59 99" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="5" strokeLinecap="round"/>
+                      <path d="M101 57.5L19 57.5" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="5" strokeLinecap="round"/>
+                    </svg>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="panel-footer">
