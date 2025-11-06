@@ -372,3 +372,93 @@ export const generateWave = (settings, phaseOffsets = []) => {
   return paths;
 };
 
+// Spirograph Pattern Generator - Parametric curves creating flowing geometric patterns
+export const generateSpirograph = (settings, seed = Math.random()) => {
+  const { 
+    width, 
+    height, 
+    strokeWidth = 1, 
+    color = '#4300B0',
+    opacity = 1.0,
+    curves = 4,           // Number of overlapping curves
+    layers = 60,          // Number of lines per curve
+    R = 120,              // Radius of fixed circle
+    r = 45,               // Radius of rolling circle
+    d = 80,               // Distance from center of rolling circle
+    rotation = 0,         // Overall rotation in degrees
+    scale = 1.0,          // Scale factor
+    verticalOffset = 0,
+    horizontalOffset = 0
+  } = settings;
+  
+  const centerX = width / 2 + horizontalOffset;
+  const centerY = height / 2 + verticalOffset;
+  
+  let paths = '';
+  
+  // Generate multiple curves with rotational offset
+  for (let curveIndex = 0; curveIndex < curves; curveIndex++) {
+    const curveRotation = (curveIndex * (360 / curves)) + rotation;
+    const radians = (curveRotation * Math.PI) / 180;
+    
+    // For each curve, generate multiple layers (lines)
+    for (let layer = 0; layer < layers; layer++) {
+      const points = [];
+      const numPoints = 800; // High resolution for smooth curves
+      
+      // Generate parametric spirograph points
+      for (let i = 0; i <= numPoints; i++) {
+        const t = (i / numPoints) * Math.PI * 2 * 12; // 12 rotations for complex pattern
+        
+        // Spirograph/epitrochoid formula with layer offset
+        const layerOffset = (layer / layers) * 0.3; // Slight variation per layer
+        const rAdjusted = r * (1 + layerOffset);
+        const dAdjusted = d * (1 + layerOffset);
+        
+        const x = (R + rAdjusted) * Math.cos(t) - dAdjusted * Math.cos(((R + rAdjusted) / rAdjusted) * t);
+        const y = (R + rAdjusted) * Math.sin(t) - dAdjusted * Math.sin(((R + rAdjusted) / rAdjusted) * t);
+        
+        // Apply scale and rotation
+        const scaledX = x * scale;
+        const scaledY = y * scale;
+        
+        const rotatedX = scaledX * Math.cos(radians) - scaledY * Math.sin(radians);
+        const rotatedY = scaledX * Math.sin(radians) + scaledY * Math.cos(radians);
+        
+        points.push({
+          x: centerX + rotatedX,
+          y: centerY + rotatedY
+        });
+      }
+      
+      // Build path from points
+      if (points.length > 0) {
+        let path = `M ${points[0].x} ${points[0].y}`;
+        
+        // Use Catmull-Rom spline for ultra-smooth curves
+        for (let i = 0; i < points.length - 1; i++) {
+          const p0 = i > 0 ? points[i - 1] : points[i];
+          const p1 = points[i];
+          const p2 = points[i + 1];
+          const p3 = i < points.length - 2 ? points[i + 2] : points[i + 1];
+          
+          // Catmull-Rom to Cubic Bezier conversion
+          const cp1x = p1.x + (p2.x - p0.x) / 6;
+          const cp1y = p1.y + (p2.y - p0.y) / 6;
+          const cp2x = p2.x - (p3.x - p1.x) / 6;
+          const cp2y = p2.y - (p3.y - p1.y) / 6;
+          
+          path += ` C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${p2.x} ${p2.y}`;
+        }
+        
+        // Vary opacity slightly per layer for depth effect
+        const layerOpacity = opacity * (0.3 + (layer / layers) * 0.7);
+        
+        paths += `<path d="${path}" stroke="${color}" stroke-width="${strokeWidth}" fill="none" opacity="${layerOpacity}" stroke-linecap="round" stroke-linejoin="round" shape-rendering="geometricPrecision"/>`;
+      }
+    }
+  }
+  
+  return paths;
+};
+

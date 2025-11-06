@@ -159,6 +159,15 @@
   gap: 10px;
 }
 
+.pattern-selector.single-row {
+  display: flex;
+  gap: 10px;
+}
+
+.pattern-selector.single-row .pattern-button {
+  flex: 1;
+}
+
 .layers-grid {
   display: grid;
   grid-template-columns: repeat(5, 1fr);

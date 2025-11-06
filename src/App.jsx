@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import './App.css';
 import CustomColorPicker from './CustomColorPicker';
-import { generateWave, generateNeurons } from './patternGenerators';
+import { generateWave, generateNeurons, generateSpirograph } from './patternGenerators';
 import { ArrowsCounterClockwise, MagnifyingGlassPlus, MagnifyingGlassMinus, MagicWand, Eraser, PenNib } from 'phosphor-react';
 import DrawIcon from './draw.svg?raw';
 
@@ -33,6 +33,22 @@ const defaultSettings = {
     branchProbability: 0.7,
     verticalOffset: 0,
     horizontalOffset: 0
+  },
+  spirograph: {
+    width: 1280,
+    height: 1040,
+    strokeWidth: 1,
+    color: '#000000',
+    opacity: 1.0,
+    curves: 4,
+    layers: 5,
+    R: 120,
+    r: 45,
+    d: 80,
+    rotation: 0,
+    scale: 1.0,
+    verticalOffset: 0,
+    horizontalOffset: 0
   }
 };
 
@@ -55,7 +71,7 @@ function App() {
   const [customPath, setCustomPath] = useState([]);
   const [useCustomPath, setUseCustomPath] = useState(false);
   const [showDrawnLine, setShowDrawnLine] = useState(true);
-  const [rotation, setRotation] = useState({ wave: 0, neurons: 0 });
+  const [rotation, setRotation] = useState({ wave: 0, neurons: 0, spirograph: 0 });
   const [patternScale, setPatternScale] = useState(1);
   const [hasDrawnInCurrentSession, setHasDrawnInCurrentSession] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
@@ -178,6 +194,14 @@ function App() {
     currentSettings.branchProbability
     // Note: verticalOffset and horizontalOffset are NOT in the dependency array
   ]);
+
+  // Switch to generation mode when changing to patterns that don't support drawing mode
+  useEffect(() => {
+    if (selectedPattern !== 'wave' && isDrawingMode) {
+      setIsDrawingMode(false);
+      setUseCustomPath(false);
+    }
+  }, [selectedPattern, isDrawingMode]);
 
   const updateSetting = (key, value) => {
     setSettings(prev => ({
@@ -458,6 +482,8 @@ function App() {
     let pattern;
     if (selectedPattern === 'neurons') {
       pattern = generateNeurons(patternSettings, neuronsSeed);
+    } else if (selectedPattern === 'spirograph') {
+      pattern = generateSpirograph(patternSettings);
     } else {
       pattern = generateWave(patternSettings, wavePhaseOffsets);
     }
@@ -510,7 +536,144 @@ function App() {
   };
 
   const renderControls = () => {
-    if (selectedPattern === 'neurons') {
+    if (selectedPattern === 'spirograph') {
+      return (
+        <>
+          <div className="control-group">
+            <label>Lines</label>
+            <div className="pattern-selector single-row">
+              <button className={`pattern-button ${Number(currentSettings.layers) === 2 ? 'active' : ''}`} onClick={() => updateSetting('layers', 2)}>2</button>
+              <button className={`pattern-button ${Number(currentSettings.layers) === 3 ? 'active' : ''}`} onClick={() => updateSetting('layers', 3)}>3</button>
+              <button className={`pattern-button ${Number(currentSettings.layers) === 4 ? 'active' : ''}`} onClick={() => updateSetting('layers', 4)}>4</button>
+              <button className={`pattern-button ${Number(currentSettings.layers) === 5 ? 'active' : ''}`} onClick={() => updateSetting('layers', 5)}>5</button>
+            </div>
+          </div>
+          <div className="control-group">
+            <label>Curves</label>
+            <div className="slider-container">
+              <div className="slider-icon">
+                <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <circle cx="60" cy="60" r="35" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="5" fill="none"/>
+                </svg>
+              </div>
+              <input
+                type="range"
+                min="3"
+                max="8"
+                step="1"
+                value={currentSettings.curves}
+                onChange={(e) => updateSetting('curves', e.target.value)}
+              />
+              <div className="slider-icon">
+                <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <circle cx="60" cy="60" r="10" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="5" fill="none"/>
+                  <circle cx="60" cy="60" r="25" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="5" fill="none"/>
+                  <circle cx="60" cy="60" r="40" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="5" fill="none"/>
+                </svg>
+              </div>
+            </div>
+          </div>
+          <div className="control-group">
+            <label>Fixed circle</label>
+            <div className="slider-container">
+              <div className="slider-icon">
+                <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <circle cx="60" cy="60" r="20" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="5" fill="none"/>
+                </svg>
+              </div>
+              <input
+                type="range"
+                min="100"
+                max="150"
+                step="5"
+                value={currentSettings.R}
+                onChange={(e) => updateSetting('R', e.target.value)}
+              />
+              <div className="slider-icon">
+                <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <circle cx="60" cy="60" r="40" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="5" fill="none"/>
+                </svg>
+              </div>
+            </div>
+          </div>
+          <div className="control-group">
+            <label>Rolling circle</label>
+            <div className="slider-container">
+              <div className="slider-icon">
+                <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <circle cx="60" cy="60" r="45" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="4" fill="none"/>
+                  <circle cx="60" cy="80" r="15" fill="rgba(255, 255, 255, 0.7)"/>
+                </svg>
+              </div>
+              <input
+                type="range"
+                min="30"
+                max="90"
+                step="5"
+                value={currentSettings.r}
+                onChange={(e) => updateSetting('r', e.target.value)}
+              />
+              <div className="slider-icon">
+                <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <circle cx="60" cy="60" r="45" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="4" fill="none"/>
+                  <circle cx="60" cy="85" r="30" fill="rgba(255, 255, 255, 0.7)"/>
+                </svg>
+              </div>
+            </div>
+          </div>
+          <div className="control-group">
+            <label>Distance</label>
+            <div className="slider-container">
+              <div className="slider-icon">
+                <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <circle cx="60" cy="60" r="40" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="5" fill="none"/>
+                  <circle cx="60" cy="60" r="5" fill="rgba(255, 255, 255, 0.7)"/>
+                  <circle cx="60" cy="75" r="5" fill="rgba(255, 255, 255, 0.7)"/>
+                </svg>
+              </div>
+              <input
+                type="range"
+                min="20"
+                max="150"
+                step="5"
+                value={currentSettings.d}
+                onChange={(e) => updateSetting('d', e.target.value)}
+              />
+              <div className="slider-icon">
+                <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <circle cx="60" cy="60" r="40" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="5" fill="none"/>
+                  <circle cx="60" cy="60" r="5" fill="rgba(255, 255, 255, 0.7)"/>
+                  <circle cx="60" cy="95" r="5" fill="rgba(255, 255, 255, 0.7)"/>
+                </svg>
+              </div>
+            </div>
+          </div>
+          <div className="control-group">
+            <label>Width</label>
+            <div className="slider-container">
+              <div className="slider-icon">
+                <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <circle cx="60" cy="60" r="10" fill="rgba(255, 255, 255, 0.7)"/>
+                </svg>
+              </div>
+              <input
+                type="range"
+                min="0.5"
+                max="1"
+                step="0.1"
+                value={currentSettings.strokeWidth}
+                onChange={(e) => updateSetting('strokeWidth', e.target.value)}
+              />
+              <div className="slider-icon">
+                <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <circle cx="60" cy="60" r="35" fill="rgba(255, 255, 255, 0.7)"/>
+                </svg>
+              </div>
+            </div>
+          </div>
+        </>
+      );
+    } else if (selectedPattern === 'neurons') {
       return (
         <>
           <div className="control-group">
@@ -890,7 +1053,7 @@ function App() {
               <MagnifyingGlassMinus size={24} weight="regular" />
             </button>
             
-            {selectedPattern !== 'neurons' && (
+            {selectedPattern === 'wave' && (
               <>
                 <div className="toolbar-divider"></div>
                 
@@ -913,7 +1076,7 @@ function App() {
               </>
             )}
 
-            {isDrawingMode && customPath.length > 0 && selectedPattern !== 'neurons' && (
+            {isDrawingMode && customPath.length > 0 && selectedPattern === 'wave' && (
               <>
                 <div className="toolbar-divider"></div>
                 
@@ -954,6 +1117,12 @@ function App() {
                 onClick={() => setSelectedPattern('neurons')}
               >
                 Neurons
+              </button>
+              <button 
+                className={`pattern-button ${selectedPattern === 'spirograph' ? 'active' : ''}`}
+                onClick={() => setSelectedPattern('spirograph')}
+              >
+                Spirograph
               </button>
             </div>
           </div>
