@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import './App.css';
 import CustomColorPicker from './CustomColorPicker';
-import { generateWave, generateNeurons, generateSpirograph } from './patternGenerators';
+import { generateWave, generateNeurons, generateSpirograph, generateNeuronLine } from './patternGenerators';
 import { ArrowsCounterClockwise, MagnifyingGlassPlus, MagnifyingGlassMinus, MagicWand, Eraser, PenNib } from 'phosphor-react';
 import DrawIcon from './draw.svg?raw';
 
@@ -52,6 +52,24 @@ const defaultSettings = {
     scale: 1.0,
     verticalOffset: 0,
     horizontalOffset: 0
+  },
+  neuronLine: {
+    width: 1280,
+    height: 1040,
+    strokeWidth: 1.5,
+    color: '#000000',
+    nodeColor: '#000000',
+    opacity: 1.0,
+    nodes: 8,
+    branches: 3,
+    depth: 4,
+    spread: 0.8,
+    curvature: 0.3,
+    nodeSize: 3,
+    branchProbability: 0.7,
+    baselineAmplitude: 0.08,
+    verticalOffset: 0,
+    horizontalOffset: 0
   }
 };
 
@@ -69,12 +87,13 @@ function App() {
   const [includeBackground, setIncludeBackground] = useState(true);
   const [wavePhaseOffsets, setWavePhaseOffsets] = useState([]);
   const [neuronsSeed, setNeuronsSeed] = useState(Math.random());
+  const [neuronLineSeed, setNeuronLineSeed] = useState(Math.random());
   const [isDrawingMode, setIsDrawingMode] = useState(false);
   const [isDrawing, setIsDrawing] = useState(false);
-  const [customPath, setCustomPath] = useState([]);
+  const [customPath, setCustomPath] = useState({ wave: [], neuronLine: [] });
   const [useCustomPath, setUseCustomPath] = useState(false);
   const [showDrawnLine, setShowDrawnLine] = useState(true);
-  const [rotation, setRotation] = useState({ wave: 0, neurons: 0, spirograph: 0 });
+  const [rotation, setRotation] = useState({ wave: 0, neurons: 0, spirograph: 0, neuronLine: 0 });
   const [patternScale, setPatternScale] = useState(1);
   const [hasDrawnInCurrentSession, setHasDrawnInCurrentSession] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
@@ -85,6 +104,41 @@ function App() {
   const canvasRef = useRef(null);
 
   const currentSettings = settings[selectedPattern];
+  
+  // Get the current pattern's custom path
+  const getCurrentCustomPath = () => {
+    if (selectedPattern === 'wave') return customPath.wave;
+    if (selectedPattern === 'neuronLine') return customPath.neuronLine;
+    return [];
+  };
+  
+  const setCurrentCustomPath = (newPathOrUpdater) => {
+    if (selectedPattern === 'wave') {
+      setCustomPath(prev => {
+        const newPath = typeof newPathOrUpdater === 'function' 
+          ? newPathOrUpdater(prev.wave) 
+          : newPathOrUpdater;
+        return { ...prev, wave: newPath };
+      });
+    } else if (selectedPattern === 'neuronLine') {
+      setCustomPath(prev => {
+        const newPath = typeof newPathOrUpdater === 'function' 
+          ? newPathOrUpdater(prev.neuronLine) 
+          : newPathOrUpdater;
+        return { ...prev, neuronLine: newPath };
+      });
+    }
+  };
+
+  // Handle pattern switching - reset drawing mode for patterns that don't support it
+  useEffect(() => {
+    if (selectedPattern !== 'wave' && selectedPattern !== 'neuronLine') {
+      setIsDrawingMode(false);
+      setUseCustomPath(false);
+      setIsEditMode(false);
+      setDraggingNodeIndex(null);
+    }
+  }, [selectedPattern]);
 
   // Helper function to generate SVG gradient definitions
   const generateGradientDefs = () => {
@@ -198,13 +252,24 @@ function App() {
     // Note: verticalOffset and horizontalOffset are NOT in the dependency array
   ]);
 
-  // Switch to generation mode when changing to patterns that don't support drawing mode
+  // Generate new seed when neuronLine settings change (but not when just dragging)
   useEffect(() => {
-    if (selectedPattern !== 'wave' && isDrawingMode) {
-      setIsDrawingMode(false);
-      setUseCustomPath(false);
+    if (selectedPattern === 'neuronLine') {
+      setNeuronLineSeed(Math.random());
     }
-  }, [selectedPattern, isDrawingMode]);
+  }, [
+    selectedPattern,
+    currentSettings.nodes,
+    currentSettings.branches,
+    currentSettings.depth,
+    currentSettings.spread,
+    currentSettings.curvature,
+    currentSettings.nodeSize,
+    currentSettings.branchProbability,
+    currentSettings.linePosition
+    // Note: verticalOffset and horizontalOffset are NOT in the dependency array
+  ]);
+
 
   const updateSetting = (key, value) => {
     setSettings(prev => ({
@@ -223,7 +288,9 @@ function App() {
     let mouseX = (e.clientX - rect.left) * scaleX;
     let mouseY = (e.clientY - rect.top) * scaleY;
 
-    if (isDrawingMode && isEditMode && customPath.length > 0) {
+    const currentPath = getCurrentCustomPath();
+    
+    if (isDrawingMode && isEditMode && currentPath.length > 0) {
       // Apply inverse transformation to mouse coordinates to match node space
       const centerX = currentSettings.width / 2;
       const centerY = currentSettings.height / 2;
@@ -242,7 +309,7 @@ function App() {
       
       // Check if clicking on a node (account for offsets)
       const nodeRadius = 10;
-      const clickedNodeIndex = customPath.findIndex((point) => {
+      const clickedNodeIndex = currentPath.findIndex((point) => {
         const offsetX = point.x + drawingModeOffsets.horizontal;
         const offsetY = point.y + drawingModeOffsets.vertical;
         const dx = offsetX - transformedX;
@@ -262,16 +329,15 @@ function App() {
         setInitialVerticalOffset(drawingModeOffsets.vertical);
         setInitialHorizontalOffset(drawingModeOffsets.horizontal);
       }
-    } else if (isDrawingMode && !isEditMode && customPath.length === 0) {
+    } else if (isDrawingMode && !isEditMode && currentPath.length === 0) {
       // First time drawing or no existing path
       setIsDrawing(true);
-      setCustomPath([]);
-      setUseCustomPath(false);
+      setUseCustomPath(false);  // Don't enable yet - wait until we have enough points
       setHasDrawnInCurrentSession(true);
       const x = mouseX;
       const y = mouseY;
-      setCustomPath([{ x, y }]);
-    } else if (isDrawingMode && !isEditMode && customPath.length > 0) {
+      setCurrentCustomPath([{ x, y }]);  // Just set to first point directly
+    } else if (isDrawingMode && !isEditMode && currentPath.length > 0) {
       // Drawing mode with existing pattern - allow dragging
       setIsDragging(true);
       setDragStartX(e.clientX);
@@ -314,20 +380,19 @@ function App() {
       const transformedY = scaledY + centerY;
       
       // Update the position of the dragged node (remove offset to store original position)
-      setCustomPath(prev => {
-        const newPath = [...prev];
-        newPath[draggingNodeIndex] = { 
-          x: transformedX - drawingModeOffsets.horizontal, 
-          y: transformedY - drawingModeOffsets.vertical 
-        };
-        return newPath;
-      });
+      const currentPath = getCurrentCustomPath();
+      const newPath = [...currentPath];
+      newPath[draggingNodeIndex] = { 
+        x: transformedX - drawingModeOffsets.horizontal, 
+        y: transformedY - drawingModeOffsets.vertical 
+      };
+      setCurrentCustomPath(newPath);
     } else if (isDrawingMode && isDrawing) {
       const x = mouseX;
       const y = mouseY;
       
       // Only add point if it's far enough from the last point (reduces jitter)
-      setCustomPath(prev => {
+      setCurrentCustomPath(prev => {
         if (prev.length === 0) return [{ x, y }];
         
         const lastPoint = prev[prev.length - 1];
@@ -337,7 +402,7 @@ function App() {
         if (distance >= 3) {
           const newPath = [...prev, { x, y }];
           
-          // Enable real-time pattern rendering once we have enough points
+          // Enable custom path rendering once we have enough points (must match generator's requirement)
           if (newPath.length > 10 && !useCustomPath) {
             setUseCustomPath(true);
           }
@@ -391,7 +456,8 @@ function App() {
     } else if (isDrawingMode && isDrawing) {
       setIsDrawing(false);
       // Keep the pattern visible even if path is short
-      if (customPath.length > 0) {
+      const currentPath = getCurrentCustomPath();
+      if (currentPath.length > 0) {
         setUseCustomPath(true);
         setShowDrawnLine(false); // Hide the red line, show only the pattern
       }
@@ -401,7 +467,7 @@ function App() {
   };
 
   const handleClearPath = () => {
-    setCustomPath([]);
+    setCurrentCustomPath([]);
     setUseCustomPath(false);
     setShowDrawnLine(false);
     setHasDrawnInCurrentSession(false);
@@ -434,16 +500,16 @@ function App() {
 
   const switchToDrawingMode = () => {
     setIsDrawingMode(true);
-    setHasDrawnInCurrentSession(false); // Reset session flag when entering drawing mode
-    setIsEditMode(false); // Start with edit mode off
+    setHasDrawnInCurrentSession(false);
+    setIsEditMode(false);
     setDraggingNodeIndex(null);
     
-    // If there's an existing custom path, show it
-    if (customPath.length > 0) {
+    const currentPath = getCurrentCustomPath();
+    
+    if (currentPath.length > 0) {
       setUseCustomPath(true);
-      setShowDrawnLine(false); // Show only pattern, not the red line
+      setShowDrawnLine(false);
     } else {
-      // No previous drawing - show blank canvas
       setUseCustomPath(false);
     }
   };
@@ -478,7 +544,7 @@ function App() {
       horizontalOffset: currentOffsets.horizontal,
       color: getColorRef(fillColor, 'line-gradient'),
       nodeColor: getColorRef(nodeColor, 'node-gradient'),
-      customPath: useCustomPath ? customPath : null
+      customPath: useCustomPath ? getCurrentCustomPath() : null
     };
     
     // Call the appropriate generator based on selected pattern
@@ -487,6 +553,8 @@ function App() {
       pattern = generateNeurons(patternSettings, neuronsSeed);
     } else if (selectedPattern === 'spirograph') {
       pattern = generateSpirograph(patternSettings);
+    } else if (selectedPattern === 'neuronLine') {
+      pattern = generateNeuronLine(patternSettings, neuronLineSeed);
     } else {
       pattern = generateWave(patternSettings, wavePhaseOffsets);
     }
@@ -539,7 +607,216 @@ function App() {
   };
 
   const renderControls = () => {
-    if (selectedPattern === 'spirograph') {
+    if (selectedPattern === 'neuronLine') {
+      return (
+        <>
+          <div className="control-group">
+            <label>Nodes</label>
+            <div className="slider-container">
+              <div className="slider-icon">
+                <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <line x1="20" y1="85" x2="100" y2="85" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="5" strokeLinecap="round"/>
+                  <circle cx="30" cy="85" r="6" fill="rgba(255, 255, 255, 0.7)"/>
+                  <circle cx="60" cy="85" r="6" fill="rgba(255, 255, 255, 0.7)"/>
+                  <circle cx="90" cy="85" r="6" fill="rgba(255, 255, 255, 0.7)"/>
+                </svg>
+              </div>
+              <input
+                type="range"
+                min="3"
+                max="15"
+                step="1"
+                value={currentSettings.nodes}
+                onChange={(e) => updateSetting('nodes', e.target.value)}
+              />
+              <div className="slider-icon">
+                <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <line x1="20" y1="85" x2="100" y2="85" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="5" strokeLinecap="round"/>
+                  <circle cx="20" cy="85" r="6" fill="rgba(255, 255, 255, 0.7)"/>
+                  <circle cx="32" cy="85" r="6" fill="rgba(255, 255, 255, 0.7)"/>
+                  <circle cx="44" cy="85" r="6" fill="rgba(255, 255, 255, 0.7)"/>
+                  <circle cx="56" cy="85" r="6" fill="rgba(255, 255, 255, 0.7)"/>
+                  <circle cx="68" cy="85" r="6" fill="rgba(255, 255, 255, 0.7)"/>
+                  <circle cx="80" cy="85" r="6" fill="rgba(255, 255, 255, 0.7)"/>
+                  <circle cx="92" cy="85" r="6" fill="rgba(255, 255, 255, 0.7)"/>
+                </svg>
+              </div>
+            </div>
+          </div>
+          <div className="control-group">
+            <label>Branches</label>
+            <div className="slider-container">
+              <div className="slider-icon">
+                <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <circle cx="60" cy="85" r="6" fill="rgba(255, 255, 255, 0.7)"/>
+                  <path d="M60 85V30" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="5" strokeLinecap="round"/>
+                </svg>
+              </div>
+              <input
+                type="range"
+                min="2"
+                max="5"
+                step="1"
+                value={currentSettings.branches}
+                onChange={(e) => updateSetting('branches', e.target.value)}
+              />
+              <div className="slider-icon">
+                <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <circle cx="60" cy="85" r="6" fill="rgba(255, 255, 255, 0.7)"/>
+                  <path d="M60 85L40 30M60 85L60 20M60 85L80 30" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="5" strokeLinecap="round"/>
+                </svg>
+              </div>
+            </div>
+          </div>
+          <div className="control-group">
+            <label>Baseline Amplitude</label>
+            <div className="slider-container">
+              <div className="slider-icon">
+                <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M20 60 Q35 90 50 105 T80 105 Q95 105 100 60" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="5" fill="none" strokeLinecap="round"/>
+                </svg>
+              </div>
+              <input
+                type="range"
+                min="-0.5"
+                max="0.5"
+                step="0.01"
+                value={currentSettings.baselineAmplitude}
+                onChange={(e) => updateSetting('baselineAmplitude', e.target.value)}
+              />
+              <div className="slider-icon">
+                <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M20 60 Q35 30 50 15 T80 15 Q95 15 100 60" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="5" fill="none" strokeLinecap="round"/>
+                </svg>
+              </div>
+            </div>
+          </div>
+          <div className="control-group">
+            <label>Depth</label>
+            <div className="slider-container">
+              <div className="slider-icon">
+                <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <circle cx="60" cy="98" r="6" fill="rgba(255, 255, 255, 0.7)"/>
+                  <path d="M60 98.5V16.5" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="5" strokeLinecap="round"/>
+                </svg>
+              </div>
+              <input
+                type="range"
+                min="2"
+                max="6"
+                step="1"
+                value={currentSettings.depth}
+                onChange={(e) => updateSetting('depth', e.target.value)}
+              />
+              <div className="slider-icon">
+                <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <circle cx="60" cy="98" r="6" fill="rgba(255, 255, 255, 0.7)"/>
+                  <path d="M60 98.5V60.5M60 60.5L75.25 45M60 60.5L44.5 45M29 29.5L44.5 45M90.5 29.5L75.25 45M75.25 45L73.5 18.5M75.25 45L101 46.5M44.5 45V19.5M44.5 45L18.5 46.5" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="5" strokeLinecap="round"/>
+                </svg>
+              </div>
+            </div>
+          </div>
+          <div className="control-group">
+            <label>Spread</label>
+            <div className="slider-container">
+              <div className="slider-icon">
+                <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <circle cx="60" cy="85" r="6" fill="rgba(255, 255, 255, 0.7)"/>
+                  <path d="M60 85L54 30M60 85L66 30" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="5" strokeLinecap="round"/>
+                </svg>
+              </div>
+              <input
+                type="range"
+                min="0.3"
+                max="1.2"
+                step="0.1"
+                value={currentSettings.spread}
+                onChange={(e) => updateSetting('spread', e.target.value)}
+              />
+              <div className="slider-icon">
+                <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <circle cx="60" cy="85" r="6" fill="rgba(255, 255, 255, 0.7)"/>
+                  <path d="M60 85L35 30M60 85L85 30" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="5" strokeLinecap="round"/>
+                </svg>
+              </div>
+            </div>
+          </div>
+          <div className="control-group">
+            <label>Curve</label>
+            <div className="slider-container">
+              <div className="slider-icon">
+                <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <circle cx="60" cy="98" r="6" fill="rgba(255, 255, 255, 0.7)"/>
+                  <path d="M60 98V30" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="5" strokeLinecap="round"/>
+                </svg>
+              </div>
+              <input
+                type="range"
+                min="0.1"
+                max="0.8"
+                step="0.05"
+                value={currentSettings.curvature}
+                onChange={(e) => updateSetting('curvature', e.target.value)}
+              />
+              <div className="slider-icon">
+                <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <circle cx="60" cy="98" r="6" fill="rgba(255, 255, 255, 0.7)"/>
+                  <path d="M60 98C60 98 35 80 35 50C35 20 60 30 60 30" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="5" strokeLinecap="round"/>
+                </svg>
+              </div>
+            </div>
+          </div>
+          <div className="control-group">
+            <label>Node Size</label>
+            <div className="slider-container">
+              <div className="slider-icon">
+                <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <circle cx="60" cy="60" r="12" fill="rgba(255, 255, 255, 0.7)"/>
+                </svg>
+              </div>
+              <input
+                type="range"
+                min="1"
+                max="8"
+                step="0.5"
+                value={currentSettings.nodeSize}
+                onChange={(e) => updateSetting('nodeSize', e.target.value)}
+              />
+              <div className="slider-icon">
+                <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <circle cx="60" cy="60" r="24" fill="rgba(255, 255, 255, 0.7)"/>
+                </svg>
+              </div>
+            </div>
+          </div>
+          <div className="control-group">
+            <label>Branch Density</label>
+            <div className="slider-container">
+              <div className="slider-icon">
+                <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <circle cx="60" cy="98" r="6" fill="rgba(255, 255, 255, 0.7)"/>
+                  <path d="M60 98.5V57.5M60 57.5L69 16.5M60 57.5L51.5 16.5" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="5" strokeLinecap="round"/>
+                </svg>
+              </div>
+              <input
+                type="range"
+                min="0.3"
+                max="0.95"
+                step="0.05"
+                value={currentSettings.branchProbability}
+                onChange={(e) => updateSetting('branchProbability', e.target.value)}
+              />
+              <div className="slider-icon">
+                <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <circle cx="60" cy="98" r="6" fill="rgba(255, 255, 255, 0.7)"/>
+                  <path d="M60 98.5V57.5M60 98.5L76 60M60 98.5L44 60M60 57.5L69 16.5M60 57.5L51.5 16.5M76 60L98.5 40.5M76 60L90.5 30M76 60L102.5 52.5M44 60L29 30M44 60L22 40.5M44 60L17 52.5" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="5" strokeLinecap="round"/>
+                </svg>
+              </div>
+            </div>
+          </div>
+        </>
+      );
+    } else if (selectedPattern === 'spirograph') {
       return (
         <>
           <div className="control-group">
@@ -947,7 +1224,7 @@ function App() {
             onMouseLeave={handleMouseUp}
             style={{ 
               cursor: draggingNodeIndex !== null ? 'grabbing' : 
-                      (isDrawingMode && !isEditMode && customPath.length === 0 ? 'crosshair' : 
+                      (isDrawingMode && !isEditMode && getCurrentCustomPath().length === 0 ? 'crosshair' : 
                       (isDrawingMode && isEditMode ? 'pointer' : 
                       (isDragging ? 'grabbing' : 'grab'))),
               position: 'relative',
@@ -958,7 +1235,7 @@ function App() {
             }}
           >
             <svg
-              key={`${selectedPattern}-${currentSettings.layers}-${rotation[selectedPattern]}-${patternScale}-${currentSettings.rotateX || 0}-${currentSettings.rotateY || 0}-${currentSettings.depth || 50}`}
+              key={`${selectedPattern}-${currentSettings.layers}-${rotation[selectedPattern]}-${patternScale}-${currentSettings.rotateX || 0}-${currentSettings.rotateY || 0}-${currentSettings.depth || 50}-${isDrawingMode}-${useCustomPath}-${getCurrentCustomPath().length}`}
               ref={svgRef}
               width={currentSettings.width}
               height={currentSettings.height}
@@ -968,11 +1245,13 @@ function App() {
               {includeBackground && (
                 <rect width="100%" height="100%" fill={getColorRef(backgroundColor, 'bg-gradient')} />
               )}
-              <g transform={`translate(${currentSettings.width / 2} ${currentSettings.height / 2}) scale(${patternScale}) ${!isDrawingMode ? `rotate(${rotation[selectedPattern]})` : ''} translate(${-currentSettings.width / 2} ${-currentSettings.height / 2})`}>
-                <g dangerouslySetInnerHTML={{ __html: generatePattern() }} />
-              </g>
+              {(!isDrawingMode || useCustomPath) && (
+                <g transform={`translate(${currentSettings.width / 2} ${currentSettings.height / 2}) scale(${patternScale}) ${!isDrawingMode ? `rotate(${rotation[selectedPattern]})` : ''} translate(${-currentSettings.width / 2} ${-currentSettings.height / 2})`}>
+                  <g dangerouslySetInnerHTML={{ __html: generatePattern() }} />
+                </g>
+              )}
             </svg>
-            {isDrawingMode && customPath.length > 0 && (showDrawnLine || isDrawing) && (
+            {isDrawingMode && getCurrentCustomPath().length > 0 && (showDrawnLine || isDrawing) && (
               <svg
                 viewBox={`0 0 ${currentSettings.width} ${currentSettings.height}`}
                 style={{
@@ -987,7 +1266,7 @@ function App() {
               >
                 <g transform={`translate(${currentSettings.width / 2} ${currentSettings.height / 2}) scale(${patternScale}) translate(${-currentSettings.width / 2} ${-currentSettings.height / 2})`}>
                   <path
-                    d={`M ${customPath.map(p => `${p.x + drawingModeOffsets.horizontal} ${p.y + drawingModeOffsets.vertical}`).join(' L ')}`}
+                    d={`M ${getCurrentCustomPath().map(p => `${p.x + drawingModeOffsets.horizontal} ${p.y + drawingModeOffsets.vertical}`).join(' L ')}`}
                     stroke="#FF0000"
                     strokeWidth="3"
                     fill="none"
@@ -997,7 +1276,7 @@ function App() {
                 </g>
               </svg>
             )}
-            {isDrawingMode && isEditMode && customPath.length > 0 && (
+            {isDrawingMode && isEditMode && getCurrentCustomPath().length > 0 && (
               <svg
                 viewBox={`0 0 ${currentSettings.width} ${currentSettings.height}`}
                 style={{
@@ -1011,7 +1290,7 @@ function App() {
                 }}
               >
                 <g transform={`translate(${currentSettings.width / 2} ${currentSettings.height / 2}) scale(${patternScale}) translate(${-currentSettings.width / 2} ${-currentSettings.height / 2})`}>
-                  {customPath.map((point, index) => (
+                  {getCurrentCustomPath().map((point, index) => (
                     <circle
                       key={index}
                       cx={point.x + drawingModeOffsets.horizontal}
@@ -1052,7 +1331,7 @@ function App() {
               <MagnifyingGlassMinus size={24} weight="regular" />
             </button>
             
-            {selectedPattern === 'wave' && (
+            {(selectedPattern === 'wave' || selectedPattern === 'neuronLine') && (
               <>
                 <div className="toolbar-divider"></div>
                 
@@ -1075,7 +1354,7 @@ function App() {
               </>
             )}
 
-            {isDrawingMode && customPath.length > 0 && selectedPattern === 'wave' && (
+            {isDrawingMode && getCurrentCustomPath().length > 0 && (selectedPattern === 'wave' || selectedPattern === 'neuronLine') && (
               <>
                 <div className="toolbar-divider"></div>
                 
@@ -1116,6 +1395,12 @@ function App() {
                 onClick={() => setSelectedPattern('neurons')}
               >
                 Neurons
+              </button>
+              <button 
+                className={`pattern-button ${selectedPattern === 'neuronLine' ? 'active' : ''}`}
+                onClick={() => setSelectedPattern('neuronLine')}
+              >
+                Neuron Line
               </button>
               <button 
                 className={`pattern-button ${selectedPattern === 'spirograph' ? 'active' : ''}`}
@@ -1172,7 +1457,7 @@ function App() {
               onChange={setFillColor}
               supportsGradient={true}
             />
-            {selectedPattern === 'neurons' && (
+            {(selectedPattern === 'neurons' || selectedPattern === 'neuronLine') && (
               <CustomColorPicker
                 label="Node"
                 color={nodeColor}
