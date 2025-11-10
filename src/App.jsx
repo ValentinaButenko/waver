@@ -98,8 +98,16 @@ function App() {
   const [hasDrawnInCurrentSession, setHasDrawnInCurrentSession] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [draggingNodeIndex, setDraggingNodeIndex] = useState(null);
-  const [generationModeOffsets, setGenerationModeOffsets] = useState({ vertical: 0, horizontal: 0 });
-  const [drawingModeOffsets, setDrawingModeOffsets] = useState({ vertical: 0, horizontal: 0 });
+  const [generationModeOffsets, setGenerationModeOffsets] = useState({
+    wave: { vertical: 0, horizontal: 0 },
+    neurons: { vertical: 0, horizontal: 0 },
+    spirograph: { vertical: 0, horizontal: 0 },
+    neuronLine: { vertical: 0, horizontal: 0 }
+  });
+  const [drawingModeOffsets, setDrawingModeOffsets] = useState({
+    wave: { vertical: 0, horizontal: 0 },
+    neuronLine: { vertical: 0, horizontal: 0 }
+  });
   const svgRef = useRef(null);
   const canvasRef = useRef(null);
 
@@ -309,9 +317,10 @@ function App() {
       
       // Check if clicking on a node (account for offsets)
       const nodeRadius = 10;
+      const currentDrawingOffsets = drawingModeOffsets[selectedPattern] || { vertical: 0, horizontal: 0 };
       const clickedNodeIndex = currentPath.findIndex((point) => {
-        const offsetX = point.x + drawingModeOffsets.horizontal;
-        const offsetY = point.y + drawingModeOffsets.vertical;
+        const offsetX = point.x + currentDrawingOffsets.horizontal;
+        const offsetY = point.y + currentDrawingOffsets.vertical;
         const dx = offsetX - transformedX;
         const dy = offsetY - transformedY;
         const distance = Math.sqrt(dx * dx + dy * dy);
@@ -326,31 +335,39 @@ function App() {
         setIsDragging(true);
         setDragStartX(e.clientX);
         setDragStartY(e.clientY);
-        setInitialVerticalOffset(drawingModeOffsets.vertical);
-        setInitialHorizontalOffset(drawingModeOffsets.horizontal);
+        setInitialVerticalOffset(currentDrawingOffsets.vertical);
+        setInitialHorizontalOffset(currentDrawingOffsets.horizontal);
       }
     } else if (isDrawingMode && !isEditMode && currentPath.length === 0) {
       // First time drawing or no existing path
       setIsDrawing(true);
       setUseCustomPath(false);  // Don't enable yet - wait until we have enough points
+      setShowDrawnLine(true);   // Show red line while drawing
       setHasDrawnInCurrentSession(true);
-      const x = mouseX;
-      const y = mouseY;
-      setCurrentCustomPath([{ x, y }]);  // Just set to first point directly
-    } else if (isDrawingMode && !isEditMode && currentPath.length > 0) {
+      
+      // Apply inverse transformation to account for pattern scale
+      const centerX = currentSettings.width / 2;
+      const centerY = currentSettings.height / 2;
+      const adjustedX = (mouseX - centerX) / patternScale + centerX;
+      const adjustedY = (mouseY - centerY) / patternScale + centerY;
+      
+      setCurrentCustomPath([{ x: adjustedX, y: adjustedY }]);
+    } else if (isDrawingMode && !isEditMode && useCustomPath && currentPath.length > 0) {
       // Drawing mode with existing pattern - allow dragging
+      const currentDrawingOffsets = drawingModeOffsets[selectedPattern] || { vertical: 0, horizontal: 0 };
       setIsDragging(true);
       setDragStartX(e.clientX);
       setDragStartY(e.clientY);
-      setInitialVerticalOffset(drawingModeOffsets.vertical);
-      setInitialHorizontalOffset(drawingModeOffsets.horizontal);
+      setInitialVerticalOffset(currentDrawingOffsets.vertical);
+      setInitialHorizontalOffset(currentDrawingOffsets.horizontal);
     } else if (!isDrawingMode) {
       // Generation mode - allow dragging
+      const currentGenOffsets = generationModeOffsets[selectedPattern] || { vertical: 0, horizontal: 0 };
       setIsDragging(true);
       setDragStartX(e.clientX);
       setDragStartY(e.clientY);
-      setInitialVerticalOffset(generationModeOffsets.vertical);
-      setInitialHorizontalOffset(generationModeOffsets.horizontal);
+      setInitialVerticalOffset(currentGenOffsets.vertical);
+      setInitialHorizontalOffset(currentGenOffsets.horizontal);
     }
     e.preventDefault();
   };
@@ -381,15 +398,19 @@ function App() {
       
       // Update the position of the dragged node (remove offset to store original position)
       const currentPath = getCurrentCustomPath();
+      const currentDrawingOffsets = drawingModeOffsets[selectedPattern] || { vertical: 0, horizontal: 0 };
       const newPath = [...currentPath];
       newPath[draggingNodeIndex] = { 
-        x: transformedX - drawingModeOffsets.horizontal, 
-        y: transformedY - drawingModeOffsets.vertical 
+        x: transformedX - currentDrawingOffsets.horizontal, 
+        y: transformedY - currentDrawingOffsets.vertical 
       };
       setCurrentCustomPath(newPath);
     } else if (isDrawingMode && isDrawing) {
-      const x = mouseX;
-      const y = mouseY;
+      // Apply inverse transformation to account for pattern scale
+      const centerX = currentSettings.width / 2;
+      const centerY = currentSettings.height / 2;
+      const x = (mouseX - centerX) / patternScale + centerX;
+      const y = (mouseY - centerY) / patternScale + centerY;
       
       // Only add point if it's far enough from the last point (reduces jitter)
       setCurrentCustomPath(prev => {
@@ -402,9 +423,10 @@ function App() {
         if (distance >= 3) {
           const newPath = [...prev, { x, y }];
           
-          // Enable custom path rendering once we have enough points (must match generator's requirement)
+          // Enable pattern rendering in real-time as you draw (once we have enough points)
           if (newPath.length > 10 && !useCustomPath) {
             setUseCustomPath(true);
+            setShowDrawnLine(false); // Hide red line once pattern appears
           }
           
           return newPath;
@@ -432,20 +454,30 @@ function App() {
         deltaY = screenDeltaX * Math.sin(rotationRad) + screenDeltaY * Math.cos(rotationRad);
       }
       
-      const newVerticalOffset = initialVerticalOffset + deltaY;
-      const newHorizontalOffset = initialHorizontalOffset + deltaX;
+      // Account for pattern scale when calculating offsets
+      const scaledDeltaX = deltaX / patternScale;
+      const scaledDeltaY = deltaY / patternScale;
+      
+      const newVerticalOffset = initialVerticalOffset + scaledDeltaY;
+      const newHorizontalOffset = initialHorizontalOffset + scaledDeltaX;
       
       // Update the appropriate offset state based on current mode
       if (isDrawingMode) {
-        setDrawingModeOffsets({
-          vertical: newVerticalOffset,
-          horizontal: newHorizontalOffset
-        });
+        setDrawingModeOffsets(prev => ({
+          ...prev,
+          [selectedPattern]: {
+            vertical: newVerticalOffset,
+            horizontal: newHorizontalOffset
+          }
+        }));
       } else {
-        setGenerationModeOffsets({
-          vertical: newVerticalOffset,
-          horizontal: newHorizontalOffset
-        });
+        setGenerationModeOffsets(prev => ({
+          ...prev,
+          [selectedPattern]: {
+            vertical: newVerticalOffset,
+            horizontal: newHorizontalOffset
+          }
+        }));
       }
     }
   };
@@ -455,11 +487,15 @@ function App() {
       setDraggingNodeIndex(null);
     } else if (isDrawingMode && isDrawing) {
       setIsDrawing(false);
-      // Keep the pattern visible even if path is short
+      // Pattern is already enabled from real-time drawing, just hide the red drawn line
       const currentPath = getCurrentCustomPath();
-      if (currentPath.length > 0) {
-        setUseCustomPath(true);
-        setShowDrawnLine(false); // Hide the red line, show only the pattern
+      if (currentPath.length > 10) {
+        // Pattern is visible, hide the red drawn line
+        setShowDrawnLine(false);
+      } else if (currentPath.length > 0) {
+        // If path is too short, keep the drawn line visible but don't generate pattern
+        setUseCustomPath(false);
+        setShowDrawnLine(true);
       }
     } else {
       setIsDragging(false);
@@ -473,6 +509,11 @@ function App() {
     setHasDrawnInCurrentSession(false);
     setIsEditMode(false);
     setDraggingNodeIndex(null);
+    // Reset offsets for current pattern only
+    setDrawingModeOffsets(prev => ({
+      ...prev,
+      [selectedPattern]: { vertical: 0, horizontal: 0 }
+    }));
   };
 
   const toggleEditMode = () => {
@@ -535,8 +576,10 @@ function App() {
       return '';
     }
     
-    // Use the appropriate offsets based on current mode
-    const currentOffsets = isDrawingMode ? drawingModeOffsets : generationModeOffsets;
+    // Use the appropriate pattern-specific offsets based on current mode
+    const currentOffsets = isDrawingMode 
+      ? (drawingModeOffsets[selectedPattern] || { vertical: 0, horizontal: 0 })
+      : (generationModeOffsets[selectedPattern] || { vertical: 0, horizontal: 0 });
     
     const patternSettings = { 
       ...currentSettings,
@@ -1224,7 +1267,7 @@ function App() {
             onMouseLeave={handleMouseUp}
             style={{ 
               cursor: draggingNodeIndex !== null ? 'grabbing' : 
-                      (isDrawingMode && !isEditMode && getCurrentCustomPath().length === 0 ? 'crosshair' : 
+                      (isDrawingMode && !isEditMode && !useCustomPath && getCurrentCustomPath().length === 0 ? 'crosshair' : 
                       (isDrawingMode && isEditMode ? 'pointer' : 
                       (isDragging ? 'grabbing' : 'grab'))),
               position: 'relative',
@@ -1265,14 +1308,19 @@ function App() {
                 }}
               >
                 <g transform={`translate(${currentSettings.width / 2} ${currentSettings.height / 2}) scale(${patternScale}) translate(${-currentSettings.width / 2} ${-currentSettings.height / 2})`}>
-                  <path
-                    d={`M ${getCurrentCustomPath().map(p => `${p.x + drawingModeOffsets.horizontal} ${p.y + drawingModeOffsets.vertical}`).join(' L ')}`}
-                    stroke="#FF0000"
-                    strokeWidth="3"
-                    fill="none"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
+                  {(() => {
+                    const currentDrawingOffsets = drawingModeOffsets[selectedPattern] || { vertical: 0, horizontal: 0 };
+                    return (
+                      <path
+                        d={`M ${getCurrentCustomPath().map(p => `${p.x + currentDrawingOffsets.horizontal} ${p.y + currentDrawingOffsets.vertical}`).join(' L ')}`}
+                        stroke="#FF0000"
+                        strokeWidth="3"
+                        fill="none"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    );
+                  })()}
                 </g>
               </svg>
             )}
@@ -1290,17 +1338,20 @@ function App() {
                 }}
               >
                 <g transform={`translate(${currentSettings.width / 2} ${currentSettings.height / 2}) scale(${patternScale}) translate(${-currentSettings.width / 2} ${-currentSettings.height / 2})`}>
-                  {getCurrentCustomPath().map((point, index) => (
-                    <circle
-                      key={index}
-                      cx={point.x + drawingModeOffsets.horizontal}
-                      cy={point.y + drawingModeOffsets.vertical}
-                      r={6 / patternScale}
-                      fill="#4DFFDF"
-                      stroke="#FFFFFF"
-                      strokeWidth={1.5 / patternScale}
-                    />
-                  ))}
+                  {(() => {
+                    const currentDrawingOffsets = drawingModeOffsets[selectedPattern] || { vertical: 0, horizontal: 0 };
+                    return getCurrentCustomPath().map((point, index) => (
+                      <circle
+                        key={index}
+                        cx={point.x + currentDrawingOffsets.horizontal}
+                        cy={point.y + currentDrawingOffsets.vertical}
+                        r={6 / patternScale}
+                        fill="#4DFFDF"
+                        stroke="#FFFFFF"
+                        strokeWidth={1.5 / patternScale}
+                      />
+                    ));
+                  })()}
                 </g>
               </svg>
             )}

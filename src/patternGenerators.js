@@ -473,10 +473,14 @@ export const generateNeuronLine = (settings, seed = Math.random()) => {
       resampledPath.push({ x, y });
     }
     
-    baselinePoints = resampledPath;
+    // Apply offsets to custom path baseline points
+    baselinePoints = resampledPath.map(point => ({
+      x: point.x + horizontalOffset,
+      y: point.y + verticalOffset
+    }));
   } else {
-    // Calculate baseline position - fixed at 75% down from top
-    const linePosition = 0.75;
+    // Calculate baseline position - centered vertically
+    const linePosition = 0.5;
     const baselineY = height * linePosition + verticalOffset;
     const lineStartX = width * 0.1 + horizontalOffset;
     const lineEndX = width * 0.9 + horizontalOffset;
