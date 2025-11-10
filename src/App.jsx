@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import './App.css';
 import CustomColorPicker from './CustomColorPicker';
-import { generateWave, generateNeurons, generateSpirograph, generateNeuronLine } from './patternGenerators';
+import { generateWave, generateNeurons, generateSpirograph, generateNeuronLine, generateSphere } from './patternGenerators';
 import { ArrowsCounterClockwise, MagnifyingGlassPlus, MagnifyingGlassMinus, MagicWand, Eraser, PenNib } from 'phosphor-react';
 import DrawIcon from './draw.svg?raw';
 
@@ -45,10 +45,10 @@ const defaultSettings = {
     R: 120,
     r: 45,
     d: 80,
-    depth: 50,
+    depth: 70,
     rotation: 0,
-    rotateX: 0,
-    rotateY: 0,
+    rotateX: 35,
+    rotateY: 40,
     scale: 1.0,
     verticalOffset: 0,
     horizontalOffset: 0
@@ -68,6 +68,23 @@ const defaultSettings = {
     nodeSize: 3,
     branchProbability: 0.7,
     baselineAmplitude: 0.08,
+    verticalOffset: 0,
+    horizontalOffset: 0
+  },
+  sphere: {
+    width: 1280,
+    height: 1040,
+    strokeWidth: 1,
+    color: '#000000',
+    opacity: 1.0,
+    layers: 70,
+    meridians: 30,
+    radius: 250,
+    waveAmplitude: 0,
+    waveFrequency: 2,
+    rotateX: 90,
+    rotateY: 40,
+    rotateZ: 40,
     verticalOffset: 0,
     horizontalOffset: 0
   }
@@ -93,7 +110,7 @@ function App() {
   const [customPath, setCustomPath] = useState({ wave: [], neuronLine: [] });
   const [useCustomPath, setUseCustomPath] = useState(false);
   const [showDrawnLine, setShowDrawnLine] = useState(true);
-  const [rotation, setRotation] = useState({ wave: 0, neurons: 0, spirograph: 0, neuronLine: 0 });
+  const [rotation, setRotation] = useState({ wave: 0, neurons: 0, spirograph: 0, neuronLine: 0, sphere: 0 });
   const [patternScale, setPatternScale] = useState(1);
   const [hasDrawnInCurrentSession, setHasDrawnInCurrentSession] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
@@ -102,7 +119,8 @@ function App() {
     wave: { vertical: 0, horizontal: 0 },
     neurons: { vertical: 0, horizontal: 0 },
     spirograph: { vertical: 0, horizontal: 0 },
-    neuronLine: { vertical: 0, horizontal: 0 }
+    neuronLine: { vertical: 0, horizontal: 0 },
+    sphere: { vertical: 0, horizontal: 0 }
   });
   const [drawingModeOffsets, setDrawingModeOffsets] = useState({
     wave: { vertical: 0, horizontal: 0 },
@@ -598,6 +616,8 @@ function App() {
       pattern = generateSpirograph(patternSettings);
     } else if (selectedPattern === 'neuronLine') {
       pattern = generateNeuronLine(patternSettings, neuronLineSeed);
+    } else if (selectedPattern === 'sphere') {
+      pattern = generateSphere(patternSettings);
     } else {
       pattern = generateWave(patternSettings, wavePhaseOffsets);
     }
@@ -992,6 +1012,136 @@ function App() {
           </div>
         </>
       );
+    } else if (selectedPattern === 'sphere') {
+      return (
+        <>
+          <div className="control-group">
+            <label>Horizontal lines</label>
+            <div className="slider-container">
+              <div className="slider-icon">
+                <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <circle cx="60" cy="40" r="25" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="3" fill="none"/>
+                  <circle cx="60" cy="60" r="35" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="3" fill="none"/>
+                </svg>
+              </div>
+              <input
+                type="range"
+                min="30"
+                max="70"
+                step="5"
+                value={currentSettings.layers}
+                onChange={(e) => updateSetting('layers', e.target.value)}
+              />
+              <div className="slider-icon">
+                <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <circle cx="60" cy="30" r="15" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="3" fill="none"/>
+                  <circle cx="60" cy="45" r="20" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="3" fill="none"/>
+                  <circle cx="60" cy="60" r="25" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="3" fill="none"/>
+                  <circle cx="60" cy="75" r="30" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="3" fill="none"/>
+                </svg>
+              </div>
+            </div>
+          </div>
+          <div className="control-group">
+            <label>Vertical lines</label>
+            <div className="slider-container">
+              <div className="slider-icon">
+                <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <circle cx="60" cy="60" r="35" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="3" fill="none"/>
+                  <line x1="60" y1="25" x2="60" y2="95" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="3"/>
+                  <line x1="25" y1="60" x2="95" y2="60" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="3"/>
+                </svg>
+              </div>
+              <input
+                type="range"
+                min="8"
+                max="30"
+                step="2"
+                value={currentSettings.meridians}
+                onChange={(e) => updateSetting('meridians', e.target.value)}
+              />
+              <div className="slider-icon">
+                <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <circle cx="60" cy="60" r="35" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="3" fill="none"/>
+                  <line x1="60" y1="25" x2="60" y2="95" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="3"/>
+                  <line x1="25" y1="60" x2="95" y2="60" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="3"/>
+                  <line x1="85" y1="35" x2="35" y2="85" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="3"/>
+                  <line x1="35" y1="35" x2="85" y2="85" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="3"/>
+                </svg>
+              </div>
+            </div>
+          </div>
+          <div className="control-group">
+            <label>Width</label>
+            <div className="slider-container">
+              <div className="slider-icon">
+                <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <circle cx="60" cy="60" r="35" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="1" fill="none"/>
+                </svg>
+              </div>
+              <input
+                type="range"
+                min="0.5"
+                max="1"
+                step="0.1"
+                value={currentSettings.strokeWidth}
+                onChange={(e) => updateSetting('strokeWidth', e.target.value)}
+              />
+              <div className="slider-icon">
+                <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <circle cx="60" cy="60" r="35" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="5" fill="none"/>
+                </svg>
+              </div>
+            </div>
+          </div>
+          <div className="control-group">
+            <label>Wave amplitude</label>
+            <div className="slider-container">
+              <div className="slider-icon">
+                <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <circle cx="60" cy="60" r="35" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="3" fill="none"/>
+                </svg>
+              </div>
+              <input
+                type="range"
+                min="0"
+                max="0.3"
+                step="0.01"
+                value={currentSettings.waveAmplitude}
+                onChange={(e) => updateSetting('waveAmplitude', e.target.value)}
+              />
+              <div className="slider-icon">
+                <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M25 60 Q40 30, 60 60 T95 60" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="3" fill="none"/>
+                </svg>
+              </div>
+            </div>
+          </div>
+          <div className="control-group">
+            <label>Wave frequency</label>
+            <div className="slider-container">
+              <div className="slider-icon">
+                <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M20 60 Q40 40, 60 60 T100 60" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="3" fill="none"/>
+                </svg>
+              </div>
+              <input
+                type="range"
+                min="2"
+                max="8"
+                step="1"
+                value={currentSettings.waveFrequency}
+                onChange={(e) => updateSetting('waveFrequency', e.target.value)}
+              />
+              <div className="slider-icon">
+                <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M20 60 Q30 40, 40 60 T60 60 Q70 40, 80 60 T100 60" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="3" fill="none"/>
+                </svg>
+              </div>
+            </div>
+          </div>
+        </>
+      );
     } else if (selectedPattern === 'neurons') {
       return (
         <>
@@ -1181,6 +1331,29 @@ function App() {
             </div>
           </div>
           <div className="control-group">
+            <label>Width</label>
+            <div className="slider-container">
+              <div className="slider-icon">
+                <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M16.5 60C16.5 60 29.1998 68 38.25 68C47.3002 68 52 64.5 60 60C68 55.5 72.6998 52 81.75 52C90.8002 52 103.5 60 103.5 60" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="5" strokeLinecap="round"/>
+                </svg>
+              </div>
+              <input
+                type="range"
+                min="0.5"
+                max="1"
+                step="0.1"
+                value={currentSettings.strokeWidth}
+                onChange={(e) => updateSetting('strokeWidth', e.target.value)}
+              />
+              <div className="slider-icon">
+                <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M16.5 60C16.5 60 29.1998 68 38.25 68C47.3002 68 52 64.5 60 60C68 55.5 72.6998 52 81.75 52C90.8002 52 103.5 60 103.5 60" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="5" strokeLinecap="round"/>
+                </svg>
+              </div>
+            </div>
+          </div>
+          <div className="control-group">
             <label>Amplitude</label>
             <div className="slider-container">
               <div className="slider-icon">
@@ -1222,29 +1395,6 @@ function App() {
               <div className="slider-icon">
                 <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path d="M104 76C104 76 96.0875 71 93.0625 60C91 52.5 89.6938 44 82.125 44C74.5562 44 71.1875 60 71.1875 60C71.1875 60 67.8188 76 60.25 76C52.6812 76 49.3125 60 49.3125 60C49.3125 60 45.9438 44 38.375 44C30.8062 44 29.5 53 27.4375 60C24.0491 71.5 16.5 76 16.5 76" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="5" strokeLinecap="round"/>
-                </svg>
-              </div>
-            </div>
-          </div>
-          <div className="control-group">
-            <label>Width</label>
-            <div className="slider-container">
-              <div className="slider-icon">
-                <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M16.5 60C16.5 60 29.1998 68 38.25 68C47.3002 68 52 64.5 60 60C68 55.5 72.6998 52 81.75 52C90.8002 52 103.5 60 103.5 60" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="5" strokeLinecap="round"/>
-                </svg>
-              </div>
-              <input
-                type="range"
-                min="0.1"
-                max="5"
-                step="0.1"
-                value={currentSettings.strokeWidth}
-                onChange={(e) => updateSetting('strokeWidth', e.target.value)}
-              />
-              <div className="slider-icon">
-                <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M16.5 60C16.5 60 29.1998 68 38.25 68C47.3002 68 52 64.5 60 60C68 55.5 72.6998 52 81.75 52C90.8002 52 103.5 60 103.5 60" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="5" strokeLinecap="round"/>
                 </svg>
               </div>
             </div>
@@ -1459,6 +1609,12 @@ function App() {
               >
                 Spirograph
               </button>
+              <button 
+                className={`pattern-button ${selectedPattern === 'sphere' ? 'active' : ''}`}
+                onClick={() => setSelectedPattern('sphere')}
+              >
+                Sphere
+              </button>
             </div>
           </div>
 
@@ -1524,34 +1680,36 @@ function App() {
             {renderControls()}
           </div>
 
-          {selectedPattern === 'spirograph' && (
+          {(selectedPattern === 'spirograph' || selectedPattern === 'sphere') && (
             <div className="panel-section">
               <h2>Position</h2>
-              <div className="control-group">
-                <label>Depth</label>
-                <div className="slider-container">
-                  <div className="slider-icon">
-                    <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M63 37.5C77.6355 37.5 89.5 49.3645 89.5 64C89.5 78.6355 77.6355 90.5 63 90.5C48.3645 90.5 36.5 78.6355 36.5 64C36.5 49.3645 48.3645 37.5 63 37.5Z" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="5"/>
-                      <path d="M56 29.5C70.6355 29.5 82.5 41.3645 82.5 56C82.5 70.6355 70.6355 82.5 56 82.5C41.3645 82.5 29.5 70.6355 29.5 56C29.5 41.3645 41.3645 29.5 56 29.5Z" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="5"/>
-                    </svg>
-                  </div>
-                  <input
-                    type="range"
-                    min="10"
-                    max="100"
-                    step="5"
-                    value={currentSettings.depth}
-                    onChange={(e) => updateSetting('depth', e.target.value)}
-                  />
-                  <div className="slider-icon">
-                    <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M43.5 17.5C57.8594 17.5 69.5 29.1406 69.5 43.5C69.5 57.8594 57.8594 69.5 43.5 69.5C29.1406 69.5 17.5 57.8594 17.5 43.5C17.5 29.1406 29.1406 17.5 43.5 17.5Z" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="5"/>
-                      <path d="M76 49.5C90.6355 49.5 102.5 61.3645 102.5 76C102.5 90.6355 90.6355 102.5 76 102.5C61.3645 102.5 49.5 90.6355 49.5 76C49.5 61.3645 61.3645 49.5 76 49.5Z" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="5"/>
-                    </svg>
+              {selectedPattern === 'spirograph' && (
+                <div className="control-group">
+                  <label>Depth</label>
+                  <div className="slider-container">
+                    <div className="slider-icon">
+                      <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M63 37.5C77.6355 37.5 89.5 49.3645 89.5 64C89.5 78.6355 77.6355 90.5 63 90.5C48.3645 90.5 36.5 78.6355 36.5 64C36.5 49.3645 48.3645 37.5 63 37.5Z" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="5"/>
+                        <path d="M56 29.5C70.6355 29.5 82.5 41.3645 82.5 56C82.5 70.6355 70.6355 82.5 56 82.5C41.3645 82.5 29.5 70.6355 29.5 56C29.5 41.3645 41.3645 29.5 56 29.5Z" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="5"/>
+                      </svg>
+                    </div>
+                    <input
+                      type="range"
+                      min="10"
+                      max="100"
+                      step="5"
+                      value={currentSettings.depth}
+                      onChange={(e) => updateSetting('depth', e.target.value)}
+                    />
+                    <div className="slider-icon">
+                      <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M43.5 17.5C57.8594 17.5 69.5 29.1406 69.5 43.5C69.5 57.8594 57.8594 69.5 43.5 69.5C29.1406 69.5 17.5 57.8594 17.5 43.5C17.5 29.1406 29.1406 17.5 43.5 17.5Z" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="5"/>
+                        <path d="M76 49.5C90.6355 49.5 102.5 61.3645 102.5 76C102.5 90.6355 90.6355 102.5 76 102.5C61.3645 102.5 49.5 90.6355 49.5 76C49.5 61.3645 61.3645 49.5 76 49.5Z" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="5"/>
+                      </svg>
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
               <div className="control-group">
                 <label>Rotate X</label>
                 <div className="slider-container">
@@ -1602,6 +1760,33 @@ function App() {
                   </div>
                 </div>
               </div>
+              {selectedPattern === 'sphere' && (
+                <div className="control-group">
+                  <label>Rotate Z</label>
+                  <div className="slider-container">
+                    <div className="slider-icon">
+                      <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="60" cy="60" r="40" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="5" fill="none"/>
+                        <path d="M60 20 L70 30 M60 20 L50 30" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="5" strokeLinecap="round"/>
+                      </svg>
+                    </div>
+                    <input
+                      type="range"
+                      min="-180"
+                      max="180"
+                      step="5"
+                      value={currentSettings.rotateZ}
+                      onChange={(e) => updateSetting('rotateZ', e.target.value)}
+                    />
+                    <div className="slider-icon">
+                      <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="60" cy="60" r="40" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="5" fill="none"/>
+                        <path d="M100 60 L90 70 M100 60 L90 50" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="5" strokeLinecap="round"/>
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
