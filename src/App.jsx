@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import './App.css';
 import CustomColorPicker from './CustomColorPicker';
-import { generateWave, generateNeurons, generateSpirograph, generateNeuronLine, generateSphere } from './patternGenerators';
+import { generateWave, generateNeurons, generateSpirograph, generateNeuronLine, generateSphere, generateTexturedSphere } from './patternGenerators';
 import { ArrowsCounterClockwise, MagnifyingGlassPlus, MagnifyingGlassMinus, MagicWand, Eraser, PenNib } from 'phosphor-react';
 import DrawIcon from './draw.svg?raw';
 
@@ -87,6 +87,26 @@ const defaultSettings = {
     rotateZ: 40,
     verticalOffset: 0,
     horizontalOffset: 0
+  },
+  texturedSphere: {
+    width: 1280,
+    height: 1040,
+    strokeWidth: 2,
+    color: '#000000',
+    opacity: 1.0,
+    dotDensity: 6500,
+    radius: 250,
+    dotSizeMin: 0.6,
+    dotSizeMax: 0.6,
+    noiseScale: 0.15,
+    noiseFrequency: 3,
+    waveAmplitude: 0.08,
+    waveFrequency: 4,
+    rotateX: 20,
+    rotateY: 30,
+    rotateZ: 0,
+    verticalOffset: 0,
+    horizontalOffset: 0
   }
 };
 
@@ -105,12 +125,13 @@ function App() {
   const [wavePhaseOffsets, setWavePhaseOffsets] = useState([]);
   const [neuronsSeed, setNeuronsSeed] = useState(Math.random());
   const [neuronLineSeed, setNeuronLineSeed] = useState(Math.random());
+  const [texturedSphereSeed, setTexturedSphereSeed] = useState(Math.random());
   const [isDrawingMode, setIsDrawingMode] = useState(false);
   const [isDrawing, setIsDrawing] = useState(false);
   const [customPath, setCustomPath] = useState({ wave: [], neuronLine: [] });
   const [useCustomPath, setUseCustomPath] = useState(false);
   const [showDrawnLine, setShowDrawnLine] = useState(true);
-  const [rotation, setRotation] = useState({ wave: 0, neurons: 0, spirograph: 0, neuronLine: 0, sphere: 0 });
+  const [rotation, setRotation] = useState({ wave: 0, neurons: 0, spirograph: 0, neuronLine: 0, sphere: 0, texturedSphere: 0 });
   const [patternScale, setPatternScale] = useState(1);
   const [hasDrawnInCurrentSession, setHasDrawnInCurrentSession] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
@@ -120,7 +141,8 @@ function App() {
     neurons: { vertical: 0, horizontal: 0 },
     spirograph: { vertical: 0, horizontal: 0 },
     neuronLine: { vertical: 0, horizontal: 0 },
-    sphere: { vertical: 0, horizontal: 0 }
+    sphere: { vertical: 0, horizontal: 0 },
+    texturedSphere: { vertical: 0, horizontal: 0 }
   });
   const [drawingModeOffsets, setDrawingModeOffsets] = useState({
     wave: { vertical: 0, horizontal: 0 },
@@ -293,6 +315,22 @@ function App() {
     currentSettings.nodeSize,
     currentSettings.branchProbability,
     currentSettings.linePosition
+    // Note: verticalOffset and horizontalOffset are NOT in the dependency array
+  ]);
+
+  // Generate new seed when texturedSphere settings change (but not when just dragging)
+  useEffect(() => {
+    if (selectedPattern === 'texturedSphere') {
+      setTexturedSphereSeed(Math.random());
+    }
+  }, [
+    selectedPattern,
+    currentSettings.dotDensity,
+    currentSettings.radius,
+    currentSettings.noiseScale,
+    currentSettings.noiseFrequency,
+    currentSettings.waveAmplitude,
+    currentSettings.waveFrequency
     // Note: verticalOffset and horizontalOffset are NOT in the dependency array
   ]);
 
@@ -618,6 +656,8 @@ function App() {
       pattern = generateNeuronLine(patternSettings, neuronLineSeed);
     } else if (selectedPattern === 'sphere') {
       pattern = generateSphere(patternSettings);
+    } else if (selectedPattern === 'texturedSphere') {
+      pattern = generateTexturedSphere(patternSettings, texturedSphereSeed);
     } else {
       pattern = generateWave(patternSettings, wavePhaseOffsets);
     }
@@ -1006,6 +1046,137 @@ function App() {
               <div className="slider-icon">
                 <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <circle cx="60" cy="60" r="35" fill="rgba(255, 255, 255, 0.7)"/>
+                </svg>
+              </div>
+            </div>
+          </div>
+        </>
+      );
+    } else if (selectedPattern === 'texturedSphere') {
+      return (
+        <>
+          <div className="control-group">
+            <label>Density</label>
+            <div className="slider-container">
+              <div className="slider-icon">
+                <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <circle cx="35" cy="35" r="4" fill="rgba(255, 255, 255, 0.7)"/>
+                  <circle cx="60" cy="35" r="4" fill="rgba(255, 255, 255, 0.7)"/>
+                  <circle cx="85" cy="35" r="4" fill="rgba(255, 255, 255, 0.7)"/>
+                  <circle cx="35" cy="60" r="4" fill="rgba(255, 255, 255, 0.7)"/>
+                  <circle cx="60" cy="60" r="4" fill="rgba(255, 255, 255, 0.7)"/>
+                  <circle cx="85" cy="60" r="4" fill="rgba(255, 255, 255, 0.7)"/>
+                  <circle cx="35" cy="85" r="4" fill="rgba(255, 255, 255, 0.7)"/>
+                  <circle cx="60" cy="85" r="4" fill="rgba(255, 255, 255, 0.7)"/>
+                  <circle cx="85" cy="85" r="4" fill="rgba(255, 255, 255, 0.7)"/>
+                </svg>
+              </div>
+              <input
+                type="range"
+                min="5000"
+                max="8000"
+                step="100"
+                value={currentSettings.dotDensity}
+                onChange={(e) => updateSetting('dotDensity', e.target.value)}
+              />
+              <div className="slider-icon">
+                <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <circle cx="20" cy="20" r="2" fill="rgba(255, 255, 255, 0.7)"/>
+                  <circle cx="30" cy="20" r="2" fill="rgba(255, 255, 255, 0.7)"/>
+                  <circle cx="40" cy="20" r="2" fill="rgba(255, 255, 255, 0.7)"/>
+                  <circle cx="50" cy="20" r="2" fill="rgba(255, 255, 255, 0.7)"/>
+                  <circle cx="60" cy="20" r="2" fill="rgba(255, 255, 255, 0.7)"/>
+                  <circle cx="70" cy="20" r="2" fill="rgba(255, 255, 255, 0.7)"/>
+                  <circle cx="80" cy="20" r="2" fill="rgba(255, 255, 255, 0.7)"/>
+                  <circle cx="90" cy="20" r="2" fill="rgba(255, 255, 255, 0.7)"/>
+                  <circle cx="100" cy="20" r="2" fill="rgba(255, 255, 255, 0.7)"/>
+                  <circle cx="20" cy="40" r="2" fill="rgba(255, 255, 255, 0.7)"/>
+                  <circle cx="30" cy="40" r="2" fill="rgba(255, 255, 255, 0.7)"/>
+                  <circle cx="40" cy="40" r="2" fill="rgba(255, 255, 255, 0.7)"/>
+                  <circle cx="50" cy="40" r="2" fill="rgba(255, 255, 255, 0.7)"/>
+                  <circle cx="60" cy="40" r="2" fill="rgba(255, 255, 255, 0.7)"/>
+                  <circle cx="70" cy="40" r="2" fill="rgba(255, 255, 255, 0.7)"/>
+                  <circle cx="80" cy="40" r="2" fill="rgba(255, 255, 255, 0.7)"/>
+                  <circle cx="90" cy="40" r="2" fill="rgba(255, 255, 255, 0.7)"/>
+                  <circle cx="100" cy="40" r="2" fill="rgba(255, 255, 255, 0.7)"/>
+                  <circle cx="20" cy="60" r="2" fill="rgba(255, 255, 255, 0.7)"/>
+                  <circle cx="30" cy="60" r="2" fill="rgba(255, 255, 255, 0.7)"/>
+                  <circle cx="40" cy="60" r="2" fill="rgba(255, 255, 255, 0.7)"/>
+                  <circle cx="50" cy="60" r="2" fill="rgba(255, 255, 255, 0.7)"/>
+                  <circle cx="60" cy="60" r="2" fill="rgba(255, 255, 255, 0.7)"/>
+                  <circle cx="70" cy="60" r="2" fill="rgba(255, 255, 255, 0.7)"/>
+                  <circle cx="80" cy="60" r="2" fill="rgba(255, 255, 255, 0.7)"/>
+                  <circle cx="90" cy="60" r="2" fill="rgba(255, 255, 255, 0.7)"/>
+                  <circle cx="100" cy="60" r="2" fill="rgba(255, 255, 255, 0.7)"/>
+                </svg>
+              </div>
+            </div>
+          </div>
+          <div className="control-group">
+            <label>Scale</label>
+            <div className="slider-container">
+              <div className="slider-icon">
+                <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <circle cx="60" cy="60" r="35" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="3" fill="none"/>
+                </svg>
+              </div>
+              <input
+                type="range"
+                min="0"
+                max="0.3"
+                step="0.01"
+                value={currentSettings.noiseScale}
+                onChange={(e) => updateSetting('noiseScale', e.target.value)}
+              />
+              <div className="slider-icon">
+                <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M25 60 Q40 30, 60 60 T95 60" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="3" fill="none"/>
+                </svg>
+              </div>
+            </div>
+          </div>
+          <div className="control-group">
+            <label>Frequency</label>
+            <div className="slider-container">
+              <div className="slider-icon">
+                <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M20 60 Q40 40, 60 60 T100 60" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="3" fill="none"/>
+                </svg>
+              </div>
+              <input
+                type="range"
+                min="1"
+                max="6"
+                step="0.5"
+                value={currentSettings.noiseFrequency}
+                onChange={(e) => updateSetting('noiseFrequency', e.target.value)}
+              />
+              <div className="slider-icon">
+                <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M20 60 Q30 40, 40 60 T60 60 Q70 40, 80 60 T100 60" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="3" fill="none"/>
+                </svg>
+              </div>
+            </div>
+          </div>
+          <div className="control-group">
+            <label>Amplitude</label>
+            <div className="slider-container">
+              <div className="slider-icon">
+                <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <circle cx="60" cy="60" r="35" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="3" fill="none"/>
+                </svg>
+              </div>
+              <input
+                type="range"
+                min="0"
+                max="0.2"
+                step="0.01"
+                value={currentSettings.waveAmplitude}
+                onChange={(e) => updateSetting('waveAmplitude', e.target.value)}
+              />
+              <div className="slider-icon">
+                <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M25 60 Q40 30, 60 60 T95 60" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="3" fill="none"/>
                 </svg>
               </div>
             </div>
@@ -1615,6 +1786,12 @@ function App() {
               >
                 Sphere
               </button>
+              <button 
+                className={`pattern-button ${selectedPattern === 'texturedSphere' ? 'active' : ''}`}
+                onClick={() => setSelectedPattern('texturedSphere')}
+              >
+                Dot Sphere
+              </button>
             </div>
           </div>
 
@@ -1680,7 +1857,7 @@ function App() {
             {renderControls()}
           </div>
 
-          {(selectedPattern === 'spirograph' || selectedPattern === 'sphere') && (
+          {(selectedPattern === 'spirograph' || selectedPattern === 'sphere' || selectedPattern === 'texturedSphere') && (
             <div className="panel-section">
               <h2>Position</h2>
               {selectedPattern === 'spirograph' && (
@@ -1760,7 +1937,7 @@ function App() {
                   </div>
                 </div>
               </div>
-              {selectedPattern === 'sphere' && (
+              {(selectedPattern === 'sphere' || selectedPattern === 'texturedSphere') && (
                 <div className="control-group">
                   <label>Rotate Z</label>
                   <div className="slider-container">
