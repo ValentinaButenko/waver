@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import './App.css';
 import CustomColorPicker from './CustomColorPicker';
-import { generateWave, generateNeurons, generateSpirograph, generateNeuronLine, generateSphere, generateTexturedSphere, generateSoundWave } from './patternGenerators';
+import { generateWave, generateNeurons, generateSpirograph, generateNeuronLine, generateSphere, generateTexturedSphere, generateSoundWave, generateSphereFlow } from './patternGenerators';
 import { ArrowsCounterClockwise, MagnifyingGlassPlus, MagnifyingGlassMinus, MagicWand, Eraser, PenNib } from 'phosphor-react';
 import DrawIcon from './draw.svg?raw';
 
@@ -123,6 +123,20 @@ const defaultSettings = {
     symmetrical: true,
     verticalOffset: 0,
     horizontalOffset: 0
+  },
+  sphereFlow: {
+    width: 1280,
+    height: 1040,
+    strokeWidth: 1,
+    color: '#000000',
+    opacity: 1.0,
+    lines: 80,
+    distortionStrength: 40,
+    distortionFrequency: 1.5,
+    noiseScale: 0.8,
+    smoothness: 0.7,
+    verticalOffset: 0,
+    horizontalOffset: 0
   }
 };
 
@@ -143,12 +157,13 @@ function App() {
   const [neuronLineSeed, setNeuronLineSeed] = useState(Math.random());
   const [texturedSphereSeed, setTexturedSphereSeed] = useState(Math.random());
   const [soundWaveSeed, setSoundWaveSeed] = useState(Math.random());
+  const [sphereFlowSeed, setSphereFlowSeed] = useState(Math.random());
   const [isDrawingMode, setIsDrawingMode] = useState(false);
   const [isDrawing, setIsDrawing] = useState(false);
   const [customPath, setCustomPath] = useState({ wave: [], neuronLine: [] });
   const [useCustomPath, setUseCustomPath] = useState(false);
   const [showDrawnLine, setShowDrawnLine] = useState(true);
-  const [rotation, setRotation] = useState({ wave: 0, neurons: 0, spirograph: 0, neuronLine: 0, sphere: 0, texturedSphere: 0, soundWave: 0 });
+  const [rotation, setRotation] = useState({ wave: 0, neurons: 0, spirograph: 0, neuronLine: 0, sphere: 0, texturedSphere: 0, soundWave: 0, sphereFlow: 0 });
   const [patternScale, setPatternScale] = useState(1);
   const [hasDrawnInCurrentSession, setHasDrawnInCurrentSession] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
@@ -160,7 +175,8 @@ function App() {
     neuronLine: { vertical: 0, horizontal: 0 },
     sphere: { vertical: 0, horizontal: 0 },
     texturedSphere: { vertical: 0, horizontal: 0 },
-    soundWave: { vertical: 0, horizontal: 0 }
+    soundWave: { vertical: 0, horizontal: 0 },
+    sphereFlow: { vertical: 0, horizontal: 0 }
   });
   const [drawingModeOffsets, setDrawingModeOffsets] = useState({
     wave: { vertical: 0, horizontal: 0 },
@@ -372,6 +388,21 @@ function App() {
     currentSettings.frequency,
     currentSettings.waveforms,
     currentSettings.symmetrical
+    // Note: verticalOffset and horizontalOffset are NOT in the dependency array
+  ]);
+
+  // Generate new seed when sphereFlow settings change (but not when just dragging)
+  useEffect(() => {
+    if (selectedPattern === 'sphereFlow') {
+      setSphereFlowSeed(Math.random());
+    }
+  }, [
+    selectedPattern,
+    currentSettings.lines,
+    currentSettings.distortionStrength,
+    currentSettings.distortionFrequency,
+    currentSettings.noiseScale,
+    currentSettings.smoothness
     // Note: verticalOffset and horizontalOffset are NOT in the dependency array
   ]);
 
@@ -701,6 +732,8 @@ function App() {
       pattern = generateTexturedSphere(patternSettings, texturedSphereSeed);
     } else if (selectedPattern === 'soundWave') {
       pattern = generateSoundWave(patternSettings, soundWaveSeed);
+    } else if (selectedPattern === 'sphereFlow') {
+      pattern = generateSphereFlow(patternSettings, sphereFlowSeed);
     } else {
       pattern = generateWave(patternSettings, wavePhaseOffsets);
     }
@@ -773,7 +806,7 @@ function App() {
             </div>
           </div>
           <div className="control-group">
-            <label>Columns</label>
+            <label>Sparsity</label>
             <div className="slider-container">
               <div className="slider-icon">
                 <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -809,7 +842,7 @@ function App() {
             </div>
           </div>
           <div className="control-group">
-            <label>Dot Spacing</label>
+            <label>Spacing</label>
             <div className="slider-container">
               <div className="slider-icon">
                 <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -904,6 +937,160 @@ function App() {
               <div className="slider-icon">
                 <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path d="M20 60 Q30 40, 40 60 T60 60 Q70 40, 80 60 T100 60" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="3" fill="none"/>
+                </svg>
+              </div>
+            </div>
+          </div>
+        </>
+      );
+    } else if (selectedPattern === 'sphereFlow') {
+      return (
+        <>
+          <div className="control-group">
+            <label>Lines</label>
+            <div className="slider-container">
+              <div className="slider-icon">
+                <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <line x1="30" y1="20" x2="30" y2="100" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="3"/>
+                  <line x1="60" y1="20" x2="60" y2="100" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="3"/>
+                  <line x1="90" y1="20" x2="90" y2="100" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="3"/>
+                </svg>
+              </div>
+              <input
+                type="range"
+                min="80"
+                max="120"
+                step="5"
+                value={currentSettings.lines}
+                onChange={(e) => updateSetting('lines', e.target.value)}
+              />
+              <div className="slider-icon">
+                <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <line x1="15" y1="20" x2="15" y2="100" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="2"/>
+                  <line x1="25" y1="20" x2="25" y2="100" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="2"/>
+                  <line x1="35" y1="20" x2="35" y2="100" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="2"/>
+                  <line x1="45" y1="20" x2="45" y2="100" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="2"/>
+                  <line x1="55" y1="20" x2="55" y2="100" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="2"/>
+                  <line x1="65" y1="20" x2="65" y2="100" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="2"/>
+                  <line x1="75" y1="20" x2="75" y2="100" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="2"/>
+                  <line x1="85" y1="20" x2="85" y2="100" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="2"/>
+                  <line x1="95" y1="20" x2="95" y2="100" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="2"/>
+                  <line x1="105" y1="20" x2="105" y2="100" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="2"/>
+                </svg>
+              </div>
+            </div>
+          </div>
+          <div className="control-group">
+            <label>Frequency</label>
+            <div className="slider-container">
+              <div className="slider-icon">
+                <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M10 60 Q30 30, 50 60 T90 60 T110 60" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="3" fill="none"/>
+                </svg>
+              </div>
+              <input
+                type="range"
+                min="0.5"
+                max="2"
+                step="0.5"
+                value={currentSettings.distortionFrequency}
+                onChange={(e) => updateSetting('distortionFrequency', e.target.value)}
+              />
+              <div className="slider-icon">
+                <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M10 60 Q20 30, 30 60 T50 60 T70 60 T90 60 T110 60" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="3" fill="none"/>
+                </svg>
+              </div>
+            </div>
+          </div>
+          <div className="control-group">
+            <label>Noise</label>
+            <div className="slider-container">
+              <div className="slider-icon">
+                <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <line x1="60" y1="50" x2="60" y2="70" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="3"/>
+                </svg>
+              </div>
+              <input
+                type="range"
+                min="0.1"
+                max="2"
+                step="0.1"
+                value={currentSettings.noiseScale}
+                onChange={(e) => updateSetting('noiseScale', e.target.value)}
+              />
+              <div className="slider-icon">
+                <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <line x1="60" y1="20" x2="60" y2="100" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="3"/>
+                </svg>
+              </div>
+            </div>
+          </div>
+          <div className="control-group">
+            <label>Smooth</label>
+            <div className="slider-container">
+              <div className="slider-icon">
+                <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M10 60 L40 40 L70 80 L110 60" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="3" fill="none"/>
+                </svg>
+              </div>
+              <input
+                type="range"
+                min="0"
+                max="1"
+                step="0.1"
+                value={currentSettings.smoothness}
+                onChange={(e) => updateSetting('smoothness', e.target.value)}
+              />
+              <div className="slider-icon">
+                <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M10 60 Q40 40, 70 60 Q90 70, 110 60" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="3" fill="none"/>
+                </svg>
+              </div>
+            </div>
+          </div>
+          <div className="control-group">
+            <label>Strength</label>
+            <div className="slider-container">
+              <div className="slider-icon">
+                <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <line x1="60" y1="20" x2="60" y2="100" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="3"/>
+                </svg>
+              </div>
+              <input
+                type="range"
+                min="20"
+                max="40"
+                step="5"
+                value={currentSettings.distortionStrength}
+                onChange={(e) => updateSetting('distortionStrength', e.target.value)}
+              />
+              <div className="slider-icon">
+                <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M60 20 Q40 60, 60 100" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="3" fill="none"/>
+                </svg>
+              </div>
+            </div>
+          </div>
+          <div className="control-group">
+            <label>Width</label>
+            <div className="slider-container">
+              <div className="slider-icon">
+                <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <line x1="20" y1="60" x2="100" y2="60" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="1"/>
+                </svg>
+              </div>
+              <input
+                type="range"
+                min="0.5"
+                max="3"
+                step="0.5"
+                value={currentSettings.strokeWidth}
+                onChange={(e) => updateSetting('strokeWidth', e.target.value)}
+              />
+              <div className="slider-icon">
+                <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <line x1="20" y1="60" x2="100" y2="60" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="5"/>
                 </svg>
               </div>
             </div>
@@ -1712,7 +1899,7 @@ function App() {
               <input
                 type="range"
                 min="0.5"
-                max="1"
+                max="3"
                 step="0.1"
                 value={currentSettings.strokeWidth}
                 onChange={(e) => updateSetting('strokeWidth', e.target.value)}
@@ -1997,6 +2184,12 @@ function App() {
                 onClick={() => handlePatternChange('soundWave')}
               >
                 Sound Wave
+              </button>
+              <button 
+                className={`pattern-button ${selectedPattern === 'sphereFlow' ? 'active' : ''}`}
+                onClick={() => handlePatternChange('sphereFlow')}
+              >
+                Sphere Flow
               </button>
             </div>
           </div>
