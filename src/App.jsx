@@ -168,6 +168,8 @@ function App() {
   const [hasDrawnInCurrentSession, setHasDrawnInCurrentSession] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [draggingNodeIndex, setDraggingNodeIndex] = useState(null);
+  const [tempCanvasWidth, setTempCanvasWidth] = useState('');
+  const [tempCanvasHeight, setTempCanvasHeight] = useState('');
   const [generationModeOffsets, setGenerationModeOffsets] = useState({
     wave: { vertical: 0, horizontal: 0 },
     neurons: { vertical: 0, horizontal: 0 },
@@ -415,6 +417,65 @@ function App() {
         [key]: parseFloat(value) || value
       }
     }));
+  };
+
+  // Canvas size input handlers
+  const handleCanvasSizeFocus = (e, dimension) => {
+    // Select all text when input is focused
+    e.target.select();
+    // Set temp value to current value if empty
+    if (dimension === 'width' && tempCanvasWidth === '') {
+      setTempCanvasWidth(currentSettings.width.toString());
+    } else if (dimension === 'height' && tempCanvasHeight === '') {
+      setTempCanvasHeight(currentSettings.height.toString());
+    }
+  };
+
+  const handleCanvasSizeChange = (e, dimension) => {
+    // Update temporary state while typing
+    if (dimension === 'width') {
+      setTempCanvasWidth(e.target.value);
+    } else {
+      setTempCanvasHeight(e.target.value);
+    }
+  };
+
+  const applyCanvasSize = (dimension, value) => {
+    // Validate and apply the new size
+    const numValue = parseInt(value);
+    if (!isNaN(numValue) && numValue >= 100 && numValue <= 4000) {
+      updateSetting(dimension, numValue);
+    }
+    // Clear temp state
+    if (dimension === 'width') {
+      setTempCanvasWidth('');
+    } else {
+      setTempCanvasHeight('');
+    }
+  };
+
+  const handleCanvasSizeBlur = (dimension) => {
+    const value = dimension === 'width' ? tempCanvasWidth : tempCanvasHeight;
+    if (value !== '') {
+      applyCanvasSize(dimension, value);
+    } else {
+      // If empty, just clear temp state
+      if (dimension === 'width') {
+        setTempCanvasWidth('');
+      } else {
+        setTempCanvasHeight('');
+      }
+    }
+  };
+
+  const handleCanvasSizeKeyDown = (e, dimension) => {
+    if (e.key === 'Enter') {
+      const value = dimension === 'width' ? tempCanvasWidth : tempCanvasHeight;
+      if (value !== '') {
+        applyCanvasSize(dimension, value);
+      }
+      e.target.blur(); // Remove focus
+    }
   };
 
   const handleMouseDown = (e) => {
@@ -2202,8 +2263,11 @@ function App() {
                 <input
                   type="number"
                   className="size-input"
-                  value={currentSettings.width}
-                  onChange={(e) => updateSetting('width', e.target.value)}
+                  value={tempCanvasWidth !== '' ? tempCanvasWidth : currentSettings.width}
+                  onChange={(e) => handleCanvasSizeChange(e, 'width')}
+                  onFocus={(e) => handleCanvasSizeFocus(e, 'width')}
+                  onBlur={() => handleCanvasSizeBlur('width')}
+                  onKeyDown={(e) => handleCanvasSizeKeyDown(e, 'width')}
                   min="100"
                   max="4000"
                 />
@@ -2213,8 +2277,11 @@ function App() {
                 <input
                   type="number"
                   className="size-input"
-                  value={currentSettings.height}
-                  onChange={(e) => updateSetting('height', e.target.value)}
+                  value={tempCanvasHeight !== '' ? tempCanvasHeight : currentSettings.height}
+                  onChange={(e) => handleCanvasSizeChange(e, 'height')}
+                  onFocus={(e) => handleCanvasSizeFocus(e, 'height')}
+                  onBlur={() => handleCanvasSizeBlur('height')}
+                  onKeyDown={(e) => handleCanvasSizeKeyDown(e, 'height')}
                   min="100"
                   max="4000"
                 />

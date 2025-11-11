@@ -29,6 +29,8 @@ const CustomColorPicker = ({ color, onChange, label, showEyeToggle, isVisible, o
   );
   const [editingStopIndex, setEditingStopIndex] = useState(null);
   const [inputValue, setInputValue] = useState('');
+  const [tempHexInput, setTempHexInput] = useState('');
+  const [tempStopInputs, setTempStopInputs] = useState({});
 
   // Sync with external color changes
   useEffect(() => {
@@ -88,10 +90,35 @@ const CustomColorPicker = ({ color, onChange, label, showEyeToggle, isVisible, o
 
   const handleInputChange = (e) => {
     const value = e.target.value.replace(/[^0-9A-Fa-f]/g, '').toUpperCase().slice(0, 6);
-    setInputValue(value);
-    if (value.length === 6) {
-      setSolidColor(value);
-      notifyChange('solid', value, gradientStops, gradientAngle, gradientType);
+    setTempHexInput(value);
+  };
+
+  const handleHexInputFocus = (e) => {
+    e.target.select();
+    if (tempHexInput === '') {
+      setTempHexInput(inputValue);
+    }
+  };
+
+  const applyHexInput = () => {
+    if (tempHexInput.length === 6) {
+      setInputValue(tempHexInput);
+      setSolidColor(tempHexInput);
+      notifyChange('solid', tempHexInput, gradientStops, gradientAngle, gradientType);
+    }
+    setTempHexInput('');
+  };
+
+  const handleHexInputBlur = () => {
+    if (tempHexInput !== '') {
+      applyHexInput();
+    }
+  };
+
+  const handleHexInputKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      applyHexInput();
+      e.target.blur();
     }
   };
 
@@ -110,22 +137,84 @@ const CustomColorPicker = ({ color, onChange, label, showEyeToggle, isVisible, o
   };
 
   const handleStopPositionChange = (index, newPosition) => {
-    const position = Math.max(0, Math.min(100, parseInt(newPosition) || 0));
-    const newStops = [...gradientStops];
-    newStops[index] = { ...newStops[index], position };
-    // Sort stops by position
-    newStops.sort((a, b) => a.position - b.position);
-    setGradientStops(newStops);
-    notifyChange(mode, solidColor, newStops, gradientAngle, gradientType);
+    setTempStopInputs(prev => ({ ...prev, [`pos_${index}`]: newPosition }));
+  };
+
+  const handleStopPositionFocus = (e, index) => {
+    e.target.select();
+    if (!tempStopInputs[`pos_${index}`]) {
+      setTempStopInputs(prev => ({ ...prev, [`pos_${index}`]: gradientStops[index].position.toString() }));
+    }
+  };
+
+  const applyStopPosition = (index) => {
+    const value = tempStopInputs[`pos_${index}`];
+    if (value !== undefined && value !== '') {
+      const position = Math.max(0, Math.min(100, parseInt(value) || 0));
+      const newStops = [...gradientStops];
+      newStops[index] = { ...newStops[index], position };
+      // Sort stops by position
+      newStops.sort((a, b) => a.position - b.position);
+      setGradientStops(newStops);
+      notifyChange(mode, solidColor, newStops, gradientAngle, gradientType);
+    }
+    setTempStopInputs(prev => {
+      const updated = { ...prev };
+      delete updated[`pos_${index}`];
+      return updated;
+    });
+  };
+
+  const handleStopPositionBlur = (index) => {
+    if (tempStopInputs[`pos_${index}`] !== undefined) {
+      applyStopPosition(index);
+    }
+  };
+
+  const handleStopPositionKeyDown = (e, index) => {
+    if (e.key === 'Enter') {
+      applyStopPosition(index);
+      e.target.blur();
+    }
   };
 
   const handleStopColorInputChange = (index, value) => {
     const hexValue = value.replace(/[^0-9A-Fa-f]/g, '').toUpperCase().slice(0, 6);
-    const newStops = [...gradientStops];
-    newStops[index] = { ...newStops[index], color: hexValue };
-    setGradientStops(newStops);
-    if (hexValue.length === 6) {
+    setTempStopInputs(prev => ({ ...prev, [`color_${index}`]: hexValue }));
+  };
+
+  const handleStopColorFocus = (e, index) => {
+    e.target.select();
+    if (!tempStopInputs[`color_${index}`]) {
+      setTempStopInputs(prev => ({ ...prev, [`color_${index}`]: gradientStops[index].color }));
+    }
+  };
+
+  const applyStopColor = (index) => {
+    const hexValue = tempStopInputs[`color_${index}`];
+    if (hexValue !== undefined && hexValue.length === 6) {
+      const newStops = [...gradientStops];
+      newStops[index] = { ...newStops[index], color: hexValue };
+      setGradientStops(newStops);
       notifyChange(mode, solidColor, newStops, gradientAngle, gradientType);
+    }
+    setTempStopInputs(prev => {
+      const updated = { ...prev };
+      delete updated[`color_${index}`];
+      return updated;
+    });
+  };
+
+  const handleStopColorBlur = (index) => {
+    if (tempStopInputs[`color_${index}`] !== undefined) {
+      applyStopColor(index);
+    }
+  };
+
+  const handleStopColorKeyDown = (e, index) => {
+    if (e.key === 'Enter') {
+      applyStopColor(index);
+      e.target.blur();
     }
   };
 
@@ -274,8 +363,11 @@ const CustomColorPicker = ({ color, onChange, label, showEyeToggle, isVisible, o
                             <input
                               type="number"
                               className="size-input stop-position-input"
-                              value={stop.position}
+                              value={tempStopInputs[`pos_${index}`] !== undefined ? tempStopInputs[`pos_${index}`] : stop.position}
                               onChange={(e) => handleStopPositionChange(index, e.target.value)}
+                              onFocus={(e) => handleStopPositionFocus(e, index)}
+                              onBlur={() => handleStopPositionBlur(index)}
+                              onKeyDown={(e) => handleStopPositionKeyDown(e, index)}
                               min="0"
                               max="100"
                             />
@@ -293,8 +385,11 @@ const CustomColorPicker = ({ color, onChange, label, showEyeToggle, isVisible, o
                             <input
                               type="text"
                               className="size-input stop-hex-input"
-                              value={stop.color}
+                              value={tempStopInputs[`color_${index}`] !== undefined ? tempStopInputs[`color_${index}`] : stop.color}
                               onChange={(e) => handleStopColorInputChange(index, e.target.value)}
+                              onFocus={(e) => handleStopColorFocus(e, index)}
+                              onBlur={() => handleStopColorBlur(index)}
+                              onKeyDown={(e) => handleStopColorKeyDown(e, index)}
                               maxLength="6"
                               placeholder="0066FF"
                               style={{ textTransform: 'uppercase' }}
@@ -336,8 +431,11 @@ const CustomColorPicker = ({ color, onChange, label, showEyeToggle, isVisible, o
                 <input
                   type="text"
                   className="size-input"
-                  value={inputValue}
+                  value={tempHexInput !== '' ? tempHexInput : inputValue}
                   onChange={handleInputChange}
+                  onFocus={handleHexInputFocus}
+                  onBlur={handleHexInputBlur}
+                  onKeyDown={handleHexInputKeyDown}
                   maxLength="6"
                   placeholder="0066FF"
                   style={{ textTransform: 'uppercase' }}
