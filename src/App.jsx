@@ -55,8 +55,8 @@ const defaultSettings = {
     d: 80,
     depth: 70,
     rotation: 0,
-    rotateX: 35,
-    rotateY: 40,
+    rotateX: 0,
+    rotateY: 0,
     scale: 1.0,
     verticalOffset: 0,
     horizontalOffset: 0
@@ -2048,17 +2048,18 @@ function App() {
                       (isDrawingMode && isEditMode ? 'pointer' : 
                       (isDragging ? 'grabbing' : 'grab'))),
               position: 'relative',
-              maxWidth: 'calc(100vw - 280px - 320px - 120px)',
-              maxHeight: 'calc(100vh - 180px)',
-              width: currentSettings.width,
-              height: currentSettings.height
+              width: `min(calc(100vw - 180px - 300px - 48px), calc((100vh - 128px) * ${currentSettings.width / currentSettings.height}))`,
+              height: `min(calc(100vh - 128px), calc((100vw - 180px - 300px - 48px) * ${currentSettings.height / currentSettings.width}))`,
+              background: includeBackground ? (backgroundColor.type === 'solid' ? `#${backgroundColor.value}` : `url(#bg-gradient)`) : '#ffffff'
             }}
           >
             <svg
               key={`${selectedPattern}-${currentSettings.layers}-${rotation[selectedPattern]}-${patternScale}-${currentSettings.rotateX || 0}-${currentSettings.rotateY || 0}-${currentSettings.depth || 50}-${isDrawingMode}-${useCustomPath}-${getCurrentCustomPath().length}`}
               ref={svgRef}
-              width={currentSettings.width}
-              height={currentSettings.height}
+              width="100%"
+              height="100%"
+              viewBox={`0 0 ${currentSettings.width} ${currentSettings.height}`}
+              preserveAspectRatio="xMidYMid meet"
               xmlns="http://www.w3.org/2000/svg"
             >
               <g dangerouslySetInnerHTML={{ __html: generateGradientDefs() }} />

@@ -20,7 +20,7 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 40px;
+  padding: 24px;
   overflow: auto;
 }
 
@@ -43,7 +43,6 @@
 }
 
 .canvas-wrapper-scaled {
-  background: #ffffff;
   border-radius: 12px;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
   overflow: hidden;
@@ -54,13 +53,14 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  contain: layout;
 }
 
 .canvas-wrapper-scaled svg {
   display: block;
   width: 100%;
   height: 100%;
-  object-fit: contain;
+  border-radius: 12px;
 }
 
 .canvas-wrapper svg rect {
@@ -100,6 +100,7 @@
 .left-panel .panel-content {
   overflow-y: auto;
   padding: 16px;
+  padding-left: 24px;
 }
 
 .side-panel .panel-content {
@@ -111,16 +112,26 @@
 }
 
 .panel-content::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.05);
+  background: transparent;
 }
 
 .panel-content::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.2);
+  background: transparent;
   border-radius: 4px;
 }
 
+.left-panel:hover .panel-content::-webkit-scrollbar-track,
+.side-panel:hover .panel-content::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.left-panel:hover .panel-content::-webkit-scrollbar-thumb,
+.side-panel:hover .panel-content::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+}
+
 .panel-content::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.3) !important;
 }
 
 .panel-footer {
@@ -150,9 +161,9 @@
 }
 
 .left-panel .panel-section {
-  margin-left: -16px;
+  margin-left: -24px;
   margin-right: -16px;
-  padding-left: 16px;
+  padding-left: 24px;
   padding-right: 16px;
 }
 
