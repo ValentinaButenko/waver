@@ -55,8 +55,8 @@ const defaultSettings = {
     d: 80,
     depth: 70,
     rotation: 0,
-    rotateX: 0,
-    rotateY: 0,
+    rotateX: 35,
+    rotateY: 40,
     scale: 1.0,
     verticalOffset: 0,
     horizontalOffset: 0
@@ -152,8 +152,8 @@ function App() {
   const [selectedPattern, setSelectedPattern] = useState('wave');
   const [settings, setSettings] = useState(defaultSettings);
   const [backgroundColor, setBackgroundColor] = useState({ type: 'solid', value: '161616' });
-  const [fillColor, setFillColor] = useState({ type: 'solid', value: '4300B0' });
-  const [nodeColor, setNodeColor] = useState({ type: 'solid', value: '4300B0' });
+  const [fillColor, setFillColor] = useState({ type: 'solid', value: '49EDFF' });
+  const [nodeColor, setNodeColor] = useState({ type: 'solid', value: '49EDFF' });
   const [isDragging, setIsDragging] = useState(false);
   const [dragStartX, setDragStartX] = useState(0);
   const [dragStartY, setDragStartY] = useState(0);

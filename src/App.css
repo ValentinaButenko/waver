@@ -208,6 +208,7 @@
 
 .pattern-selector.single-row .pattern-button {
   flex: 1;
+  padding: 10px;
 }
 
 .layers-grid {
