@@ -11,14 +11,14 @@ const CustomColorPicker = ({ color, onChange, label, showEyeToggle, isVisible, o
   // Normalize color data structure
   const colorData = typeof color === 'string' ? { type: 'solid', value: color } : color;
   const [mode, setMode] = useState(colorData.type || 'solid');
-  const [solidColor, setSolidColor] = useState(colorData.type === 'solid' ? colorData.value : '4300B0');
+  const [solidColor, setSolidColor] = useState(colorData.type === 'solid' ? colorData.value : '30B4FF');
   const [gradientStops, setGradientStops] = useState(
     (colorData.type === 'linear' || colorData.type === 'radial') ? colorData.stops.map(s => ({
       ...s,
       opacity: s.opacity !== undefined ? s.opacity : 100
     })) : [
-      { color: '4300B0', position: 0, opacity: 100 },
-      { color: 'FF00FF', position: 100, opacity: 100 }
+      { color: '30B4FF', position: 0, opacity: 100 },
+      { color: '0453B6', position: 100, opacity: 100 }
     ]
   );
   const [gradientAngle, setGradientAngle] = useState(
@@ -228,7 +228,7 @@ const CustomColorPicker = ({ color, onChange, label, showEyeToggle, isVisible, o
 
   const addGradientStop = () => {
     const newPosition = 50;
-    const newColor = gradientStops.length > 0 ? gradientStops[0].color : '4300B0';
+    const newColor = gradientStops.length > 0 ? gradientStops[0].color : '30B4FF';
     const newOpacity = gradientStops.length > 0 ? gradientStops[0].opacity : 100;
     const newStops = [...gradientStops, { color: newColor, position: newPosition, opacity: newOpacity }];
     newStops.sort((a, b) => a.position - b.position);
@@ -289,8 +289,8 @@ const CustomColorPicker = ({ color, onChange, label, showEyeToggle, isVisible, o
           title="Linear Gradient"
         >
           <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <rect x="0" y="0" width="10" height="20" fill={`#${gradientStops[0]?.color || '4300B0'}`} />
-            <rect x="10" y="0" width="10" height="20" fill={`#${gradientStops[1]?.color || gradientStops[0]?.color || '4300B0'}`} />
+            <rect x="0" y="0" width="10" height="20" fill={`#${gradientStops[0]?.color || '30B4FF'}`} />
+            <rect x="10" y="0" width="10" height="20" fill={`#${gradientStops[1]?.color || gradientStops[0]?.color || '30B4FF'}`} />
           </svg>
         </button>
         <button
@@ -299,9 +299,9 @@ const CustomColorPicker = ({ color, onChange, label, showEyeToggle, isVisible, o
           title="Radial Gradient"
         >
           <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <circle cx="10" cy="10" r="10" fill={`#${gradientStops[0]?.color || '4300B0'}`} />
-            <circle cx="10" cy="10" r="7" fill={`#${gradientStops[1]?.color || gradientStops[0]?.color || '4300B0'}`} />
-            <circle cx="10" cy="10" r="4" fill={`#${gradientStops[0]?.color || '4300B0'}`} />
+            <circle cx="10" cy="10" r="10" fill={`#${gradientStops[0]?.color || '30B4FF'}`} />
+            <circle cx="10" cy="10" r="7" fill={`#${gradientStops[1]?.color || gradientStops[0]?.color || '30B4FF'}`} />
+            <circle cx="10" cy="10" r="4" fill={`#${gradientStops[0]?.color || '30B4FF'}`} />
           </svg>
         </button>
       </div>
@@ -346,7 +346,7 @@ const CustomColorPicker = ({ color, onChange, label, showEyeToggle, isVisible, o
                   
                   <div className="gradient-stops">
                     <div className="gradient-stops-header">
-                      <label>Color Stops</label>
+                      <label>Stops</label>
                       <button 
                         className="add-stop-button" 
                         onClick={addGradientStop}
