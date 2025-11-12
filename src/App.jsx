@@ -4,6 +4,14 @@ import CustomColorPicker from './CustomColorPicker';
 import { generateWave, generateNeurons, generateSpirograph, generateNeuronLine, generateSphere, generateTexturedSphere, generateSoundWave, generateSphereFlow } from './patternGenerators';
 import { ArrowsCounterClockwise, MagnifyingGlassPlus, MagnifyingGlassMinus, MagicWand, Eraser, PenNib } from 'phosphor-react';
 import DrawIcon from './draw.svg?raw';
+import wavePreview from './assets/wave.png';
+import soundWavePreview from './assets/sound.png';
+import sphereFlowPreview from './assets/sphere flow.png';
+import neuronLinePreview from './assets/neuron line.png';
+import neuronsPreview from './assets/neuron cell.png';
+import spherePreview from './assets/sphere.png';
+import dotSpherePreview from './assets/dot sphere.png';
+import spirographPreview from './assets/spirograph.png';
 
 const defaultSettings = {
   wave: {
@@ -2040,7 +2048,7 @@ function App() {
                       (isDrawingMode && isEditMode ? 'pointer' : 
                       (isDragging ? 'grabbing' : 'grab'))),
               position: 'relative',
-              maxWidth: 'calc(100vw - 360px - 120px)',
+              maxWidth: 'calc(100vw - 280px - 320px - 120px)',
               maxHeight: 'calc(100vh - 180px)',
               width: currentSettings.width,
               height: currentSettings.height
@@ -2199,7 +2207,7 @@ function App() {
         </div>
       </div>
 
-      <div className="side-panel">
+      <div className="left-panel">
         <div className="panel-content">
           <div className="panel-section">
             <h2>Pattern Type</h2>
@@ -2208,52 +2216,65 @@ function App() {
                 className={`pattern-button ${selectedPattern === 'wave' ? 'active' : ''}`}
                 onClick={() => handlePatternChange('wave')}
               >
-                Wave
-              </button>
-              <button 
-                className={`pattern-button ${selectedPattern === 'neurons' ? 'active' : ''}`}
-                onClick={() => handlePatternChange('neurons')}
-              >
-                Neurons
-              </button>
-              <button 
-                className={`pattern-button ${selectedPattern === 'neuronLine' ? 'active' : ''}`}
-                onClick={() => handlePatternChange('neuronLine')}
-              >
-                Neuron Line
-              </button>
-              <button 
-                className={`pattern-button ${selectedPattern === 'spirograph' ? 'active' : ''}`}
-                onClick={() => handlePatternChange('spirograph')}
-              >
-                Spirograph
-              </button>
-              <button 
-                className={`pattern-button ${selectedPattern === 'sphere' ? 'active' : ''}`}
-                onClick={() => handlePatternChange('sphere')}
-              >
-                Sphere
-              </button>
-              <button 
-                className={`pattern-button ${selectedPattern === 'texturedSphere' ? 'active' : ''}`}
-                onClick={() => handlePatternChange('texturedSphere')}
-              >
-                Dot Sphere
+                <img src={wavePreview} alt="Wave" className="pattern-preview" />
+                <span className="pattern-label">Wave</span>
               </button>
               <button 
                 className={`pattern-button ${selectedPattern === 'soundWave' ? 'active' : ''}`}
                 onClick={() => handlePatternChange('soundWave')}
               >
-                Sound Wave
+                <img src={soundWavePreview} alt="Sound Wave" className="pattern-preview" />
+                <span className="pattern-label">Sound Wave</span>
               </button>
               <button 
                 className={`pattern-button ${selectedPattern === 'sphereFlow' ? 'active' : ''}`}
                 onClick={() => handlePatternChange('sphereFlow')}
               >
-                Sphere Flow
+                <img src={sphereFlowPreview} alt="Sphere Flow" className="pattern-preview" />
+                <span className="pattern-label">Sphere Flow</span>
+              </button>
+              <button 
+                className={`pattern-button ${selectedPattern === 'neuronLine' ? 'active' : ''}`}
+                onClick={() => handlePatternChange('neuronLine')}
+              >
+                <img src={neuronLinePreview} alt="Neuron Line" className="pattern-preview" />
+                <span className="pattern-label">Neuron Line</span>
+              </button>
+              <button 
+                className={`pattern-button ${selectedPattern === 'neurons' ? 'active' : ''}`}
+                onClick={() => handlePatternChange('neurons')}
+              >
+                <img src={neuronsPreview} alt="Neurons" className="pattern-preview" />
+                <span className="pattern-label">Neurons</span>
+              </button>
+              <button 
+                className={`pattern-button ${selectedPattern === 'sphere' ? 'active' : ''}`}
+                onClick={() => handlePatternChange('sphere')}
+              >
+                <img src={spherePreview} alt="Sphere" className="pattern-preview" />
+                <span className="pattern-label">Sphere</span>
+              </button>
+              <button 
+                className={`pattern-button ${selectedPattern === 'texturedSphere' ? 'active' : ''}`}
+                onClick={() => handlePatternChange('texturedSphere')}
+              >
+                <img src={dotSpherePreview} alt="Dot Sphere" className="pattern-preview" />
+                <span className="pattern-label">Dot Sphere</span>
+              </button>
+              <button 
+                className={`pattern-button ${selectedPattern === 'spirograph' ? 'active' : ''}`}
+                onClick={() => handlePatternChange('spirograph')}
+              >
+                <img src={spirographPreview} alt="Spirograph" className="pattern-preview" />
+                <span className="pattern-label">Spirograph</span>
               </button>
             </div>
           </div>
+        </div>
+      </div>
+
+      <div className="side-panel">
+        <div className="panel-content">
 
           <div className="panel-section">
             <h2>Canvas Size</h2>
