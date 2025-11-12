@@ -31,6 +31,12 @@ const CustomColorPicker = ({ color, onChange, label, showEyeToggle, isVisible, o
   const [inputValue, setInputValue] = useState('');
   const [tempHexInput, setTempHexInput] = useState('');
   const [tempStopInputs, setTempStopInputs] = useState({});
+  const [colorHistory, setColorHistory] = useState(() => {
+    // Load history from localStorage
+    const stored = localStorage.getItem('colorPickerHistory');
+    return stored ? JSON.parse(stored) : [];
+  });
+  const [colorOnOpen, setColorOnOpen] = useState(null);
 
   // Sync with external color changes
   useEffect(() => {
@@ -61,16 +67,35 @@ const CustomColorPicker = ({ color, onChange, label, showEyeToggle, isVisible, o
       ) {
         setIsOpen(false);
         setEditingStopIndex(null);
+        // Add to history when picker closes if color changed
+        if (mode === 'solid' && colorOnOpen && colorOnOpen !== solidColor) {
+          addToHistory(solidColor);
+        }
       }
     };
     
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [isOpen]);
+  }, [isOpen, mode, solidColor, colorOnOpen]);
 
-  const notifyChange = (newMode, newSolidColor, newGradientStops, newGradientAngle, newGradientType) => {
+  const addToHistory = (hexColor) => {
+    setColorHistory(prevHistory => {
+      // Remove if already exists
+      const filtered = prevHistory.filter(c => c !== hexColor);
+      // Add to front, keep only last 6
+      const newHistory = [hexColor, ...filtered].slice(0, 6);
+      // Save to localStorage
+      localStorage.setItem('colorPickerHistory', JSON.stringify(newHistory));
+      return newHistory;
+    });
+  };
+
+  const notifyChange = (newMode, newSolidColor, newGradientStops, newGradientAngle, newGradientType, addHistory = false) => {
     if (newMode === 'solid') {
       onChange({ type: 'solid', value: newSolidColor });
+      if (addHistory) {
+        addToHistory(newSolidColor);
+      }
     } else {
       onChange({ 
         type: newMode, // 'linear' or 'radial'
@@ -104,7 +129,7 @@ const CustomColorPicker = ({ color, onChange, label, showEyeToggle, isVisible, o
     if (tempHexInput.length === 6) {
       setInputValue(tempHexInput);
       setSolidColor(tempHexInput);
-      notifyChange('solid', tempHexInput, gradientStops, gradientAngle, gradientType);
+      notifyChange('solid', tempHexInput, gradientStops, gradientAngle, gradientType, true);
     }
     setTempHexInput('');
   };
@@ -316,7 +341,17 @@ const CustomColorPicker = ({ color, onChange, label, showEyeToggle, isVisible, o
           <div 
             className="color-preview-swatch"
             style={getSwatchStyle()}
-            onClick={() => setIsOpen(!isOpen)}
+            onClick={() => {
+              if (!isOpen) {
+                setColorOnOpen(solidColor);
+              } else {
+                // Add to history when closing picker if color changed
+                if (mode === 'solid' && colorOnOpen && colorOnOpen !== solidColor) {
+                  addToHistory(solidColor);
+                }
+              }
+              setIsOpen(!isOpen);
+            }}
           />
           
           {isOpen && (
@@ -324,7 +359,29 @@ const CustomColorPicker = ({ color, onChange, label, showEyeToggle, isVisible, o
               {renderModeSelector()}
               
               {mode === 'solid' ? (
-                <HexColorPicker color={`#${solidColor}`} onChange={handleColorChange} />
+                <>
+                  <HexColorPicker color={`#${solidColor}`} onChange={handleColorChange} />
+                  {colorHistory.length > 0 && (
+                    <div className="color-history">
+                      <label className="color-history-label">History</label>
+                      <div className="color-history-swatches">
+                        {colorHistory.map((historyColor, index) => (
+                          <div
+                            key={index}
+                            className="color-history-swatch"
+                            style={{ backgroundColor: `#${historyColor}` }}
+                            onClick={() => {
+                              setSolidColor(historyColor);
+                              setInputValue(historyColor);
+                              notifyChange('solid', historyColor, gradientStops, gradientAngle, gradientType, true);
+                            }}
+                            title={`#${historyColor}`}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </>
               ) : (
                 <div className="gradient-editor">
                   <div className="gradient-preview" style={getSwatchStyle()} />
