@@ -99,8 +99,7 @@
 
 .left-panel .panel-content {
   overflow-y: auto;
-  padding: 16px;
-  padding-left: 24px;
+  padding: 24px 16px 16px 24px;
 }
 
 .side-panel .panel-content {
@@ -188,13 +187,13 @@
 .pattern-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 10px;
+  gap: 16px;
 }
 
 .pattern-selector {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 10px;
+  gap: 16px;
 }
 
 .pattern-selector .pattern-button {
@@ -203,7 +202,7 @@
 
 .pattern-selector.single-row {
   display: flex;
-  gap: 10px;
+  gap: 16px;
 }
 
 .pattern-selector.single-row .pattern-button {
