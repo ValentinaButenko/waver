@@ -1,9 +1,16 @@
 import { useState, useRef, useEffect } from 'react';
 import './App.css';
 import CustomColorPicker from './CustomColorPicker';
+import AboutModal from './components/AboutModal';
 import { generateWave, generateNeurons, generateSpirograph, generateNeuronLine, generateSphere, generateTexturedSphere, generateSoundWave, generateSphereFlow } from './patternGenerators';
-import { ArrowsCounterClockwise, MagnifyingGlassPlus, MagnifyingGlassMinus, MagicWand, Eraser, PenNib } from 'phosphor-react';
+import { ArrowsCounterClockwise, MagnifyingGlassPlus, MagnifyingGlassMinus, MagicWand, Eraser, PenNib, Info } from 'phosphor-react';
 import DrawIcon from './draw.svg?raw';
+import amplitudeLowIcon from './assets/amplitude-low.svg?raw';
+import amplitudeHighIcon from './assets/amplitude-high.svg?raw';
+import curveLowIcon from './assets/curve-low.svg?raw';
+import curveHighIcon from './assets/curve-high.svg?raw';
+import spreadLowIcon from './assets/spread-low.svg?raw';
+import spreadHighIcon from './assets/spread-high.svg?raw';
 import wavePreview from './assets/wave.png';
 import soundWavePreview from './assets/sound.png';
 import sphereFlowPreview from './assets/sphere flow.png';
@@ -154,6 +161,7 @@ function App() {
   const [backgroundColor, setBackgroundColor] = useState({ type: 'solid', value: '161616' });
   const [fillColor, setFillColor] = useState({ type: 'solid', value: '49EDFF' });
   const [nodeColor, setNodeColor] = useState({ type: 'solid', value: '49EDFF' });
+  const [isAboutModalOpen, setIsAboutModalOpen] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [dragStartX, setDragStartX] = useState(0);
   const [dragStartY, setDragStartY] = useState(0);
@@ -1228,13 +1236,9 @@ function App() {
             </div>
           </div>
           <div className="control-group">
-            <label>Baseline Amplitude</label>
+            <label>Amplitude</label>
             <div className="slider-container">
-              <div className="slider-icon">
-                <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M20 60 Q35 90 50 105 T80 105 Q95 105 100 60" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="5" fill="none" strokeLinecap="round"/>
-                </svg>
-              </div>
+              <div className="slider-icon" dangerouslySetInnerHTML={{ __html: amplitudeLowIcon }} />
               <input
                 type="range"
                 min="-0.5"
@@ -1243,11 +1247,7 @@ function App() {
                 value={currentSettings.baselineAmplitude}
                 onChange={(e) => updateSetting('baselineAmplitude', e.target.value)}
               />
-              <div className="slider-icon">
-                <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M20 60 Q35 30 50 15 T80 15 Q95 15 100 60" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="5" fill="none" strokeLinecap="round"/>
-                </svg>
-              </div>
+              <div className="slider-icon" dangerouslySetInnerHTML={{ __html: amplitudeHighIcon }} />
             </div>
           </div>
           <div className="control-group">
@@ -1278,12 +1278,7 @@ function App() {
           <div className="control-group">
             <label>Spread</label>
             <div className="slider-container">
-              <div className="slider-icon">
-                <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <circle cx="60" cy="85" r="6" fill="rgba(255, 255, 255, 0.7)"/>
-                  <path d="M60 85L54 30M60 85L66 30" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="5" strokeLinecap="round"/>
-                </svg>
-              </div>
+              <div className="slider-icon" dangerouslySetInnerHTML={{ __html: spreadLowIcon }} />
               <input
                 type="range"
                 min="0.3"
@@ -1292,23 +1287,13 @@ function App() {
                 value={currentSettings.spread}
                 onChange={(e) => updateSetting('spread', e.target.value)}
               />
-              <div className="slider-icon">
-                <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <circle cx="60" cy="85" r="6" fill="rgba(255, 255, 255, 0.7)"/>
-                  <path d="M60 85L35 30M60 85L85 30" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="5" strokeLinecap="round"/>
-                </svg>
-              </div>
+              <div className="slider-icon" dangerouslySetInnerHTML={{ __html: spreadHighIcon }} />
             </div>
           </div>
           <div className="control-group">
             <label>Curve</label>
             <div className="slider-container">
-              <div className="slider-icon">
-                <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <circle cx="60" cy="98" r="6" fill="rgba(255, 255, 255, 0.7)"/>
-                  <path d="M60 98V30" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="5" strokeLinecap="round"/>
-                </svg>
-              </div>
+              <div className="slider-icon" dangerouslySetInnerHTML={{ __html: curveLowIcon }} />
               <input
                 type="range"
                 min="0.1"
@@ -1317,16 +1302,11 @@ function App() {
                 value={currentSettings.curvature}
                 onChange={(e) => updateSetting('curvature', e.target.value)}
               />
-              <div className="slider-icon">
-                <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <circle cx="60" cy="98" r="6" fill="rgba(255, 255, 255, 0.7)"/>
-                  <path d="M60 98C60 98 35 80 35 50C35 20 60 30 60 30" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="5" strokeLinecap="round"/>
-                </svg>
-              </div>
+              <div className="slider-icon" dangerouslySetInnerHTML={{ __html: curveHighIcon }} />
             </div>
           </div>
           <div className="control-group">
-            <label>Node Size</label>
+            <label>Size</label>
             <div className="slider-container">
               <div className="slider-icon">
                 <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -1349,7 +1329,7 @@ function App() {
             </div>
           </div>
           <div className="control-group">
-            <label>Branch Density</label>
+            <label>Density</label>
             <div className="slider-container">
               <div className="slider-icon">
                 <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -1875,7 +1855,7 @@ function App() {
             </div>
           </div>
           <div className="control-group">
-            <label>Node Size</label>
+            <label>Size</label>
             <div className="slider-container">
               <div className="slider-icon">
                 <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -1898,7 +1878,7 @@ function App() {
             </div>
           </div>
           <div className="control-group">
-            <label>Branch Density</label>
+            <label>Density</label>
             <div className="slider-container">
               <div className="slider-icon">
                 <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -2209,9 +2189,48 @@ function App() {
       </div>
 
       <div className="left-panel">
+        {/* Header with logo, name and info button */}
+        <div style={{ 
+          padding: '20px 24px', 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'space-between',
+          borderBottom: '1px solid rgba(255, 255, 255, 0.1)'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            {/* Waver Logo */}
+            <div 
+              style={{ 
+                width: '24px', 
+                height: '24px', 
+                color: 'rgba(77, 255, 223, 0.9)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
+              dangerouslySetInnerHTML={{ __html: DrawIcon }}
+            />
+            {/* Waver Text */}
+            <span style={{ 
+              fontSize: '18px', 
+              fontWeight: '600', 
+              color: 'rgba(255, 255, 255, 0.95)',
+              letterSpacing: '0.5px'
+            }}>
+              WAVER
+            </span>
+            {/* Info Icon */}
+            <Info 
+              size={24} 
+              weight="regular" 
+              color="rgba(255, 255, 255, 0.7)" 
+              style={{ cursor: 'pointer' }} 
+              onClick={() => setIsAboutModalOpen(true)}
+            />
+          </div>
+        </div>
         <div className="panel-content">
           <div className="panel-section">
-            <h2>Pattern Type</h2>
             <div className="pattern-selector">
               <button 
                 className={`pattern-button ${selectedPattern === 'wave' ? 'active' : ''}`}
@@ -2469,6 +2488,7 @@ function App() {
           </div>
         </div>
       </div>
+      <AboutModal isOpen={isAboutModalOpen} onClose={() => setIsAboutModalOpen(false)} />
     </div>
   );
 }

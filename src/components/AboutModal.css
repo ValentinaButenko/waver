@@ -1,0 +1,125 @@
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  backdrop-filter: blur(2px);
+}
+
+.modal-content {
+  background: var(--blue-01);
+  border-radius: 16px;
+  width: 90%;
+  max-width: 600px;
+  max-height: 80vh;
+  overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.modal-header {
+  padding: 20px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.modal-header h1 {
+  font-family: 'GT Welsheim Pro', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 32px;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0;
+}
+
+.modal-close-button {
+  background: rgba(255, 255, 255, 0.05);
+  border: none;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.modal-close-button:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.modal-body {
+  padding: 32px;
+  overflow-y: auto;
+  max-height: calc(80vh - 85px);
+}
+
+.modal-body p {
+  font-family: 'GT Welsheim Pro', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 18px;
+  line-height: 1.6;
+  color: rgba(255, 255, 255, 0.85);
+  margin: 0 0 24px 0;
+}
+
+.modal-body p:last-child {
+  margin-bottom: 0;
+}
+
+.modal-body strong {
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.modal-divider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.1);
+  margin: 32px 0;
+}
+
+.modal-footer-text {
+  font-size: 16px !important;
+  color: rgba(255, 255, 255, 0.6) !important;
+  text-align: left;
+}
+
+.copy-icon {
+  display: inline-block;
+  margin-left: 8px;
+  vertical-align: middle;
+  cursor: pointer;
+  color: rgba(255, 255, 255, 0.7);
+  transition: all 0.2s ease;
+}
+
+.copy-icon:hover {
+  color: #ffffff;
+  transform: scale(1.1);
+}
+
+.copy-icon.copied {
+  color: #4DFFDF;
+  cursor: default;
+}
+
+.author-link {
+  color: rgba(255, 255, 255, 0.8);
+  text-decoration: none;
+  transition: all 0.2s ease;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.author-link:hover {
+  color: #4DFFDF;
+  border-bottom-color: #4DFFDF;
+}
+

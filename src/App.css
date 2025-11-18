@@ -7,6 +7,18 @@
   --gradient: linear-gradient(135deg, #4DFFDF 0%, #4DA1FF 100%);
 }
 
+/* Remove outline from all buttons */
+button {
+  outline: none !important;
+}
+
+button:focus,
+button:focus-visible,
+button:active {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
 .app {
   display: flex;
   width: 100%;
