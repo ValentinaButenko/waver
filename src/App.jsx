@@ -2,8 +2,9 @@ import { useState, useRef, useEffect } from 'react';
 import './App.css';
 import CustomColorPicker from './CustomColorPicker';
 import AboutModal from './components/AboutModal';
+import MobileNotice from './components/MobileNotice';
 import { generateWave, generateNeurons, generateSpirograph, generateNeuronLine, generateSphere, generateTexturedSphere, generateSoundWave, generateSphereFlow } from './patternGenerators';
-import { ArrowsCounterClockwise, MagnifyingGlassPlus, MagnifyingGlassMinus, MagicWand, Eraser, PenNib, Info } from 'phosphor-react';
+import { ArrowsCounterClockwise, MagnifyingGlassPlus, MagnifyingGlassMinus, MagicWand, Eraser, PenNib, Info, PencilSimple, LineSegments } from '@phosphor-icons/react';
 import DrawIcon from './draw.svg?raw';
 import amplitudeLowIcon from './assets/amplitude-low.svg?raw';
 import amplitudeHighIcon from './assets/amplitude-high.svg?raw';
@@ -2157,7 +2158,7 @@ function App() {
                     onClick={switchToDrawingMode}
                     title="Drawing Mode"
                   >
-                    <div dangerouslySetInnerHTML={{ __html: DrawIcon }} />
+                    <PencilSimple size={24} weight="regular" />
                   </button>
                 </div>
               </>
@@ -2180,7 +2181,7 @@ function App() {
                   onClick={toggleEditMode}
                   title="Edit Mode"
                 >
-                  <PenNib size={24} weight="regular" />
+                  <LineSegments size={24} weight="regular" />
                 </button>
               </>
             )}
@@ -2489,6 +2490,7 @@ function App() {
         </div>
       </div>
       <AboutModal isOpen={isAboutModalOpen} onClose={() => setIsAboutModalOpen(false)} />
+      <MobileNotice />
     </div>
   );
 }

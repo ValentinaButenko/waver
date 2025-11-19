@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { HexColorPicker } from 'react-colorful';
-import { Eye, EyeClosed, Plus, Minus } from 'phosphor-react';
+import { Eye, EyeClosed, Plus, Minus } from '@phosphor-icons/react';
 import './CustomColorPicker.css';
 
 const CustomColorPicker = ({ color, onChange, label, showEyeToggle, isVisible, onToggleVisibility, supportsGradient = false, compact = false }) => {

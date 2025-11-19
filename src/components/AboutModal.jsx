@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Copy, CheckSquare } from 'phosphor-react';
+import { X, Copy, CheckSquare } from '@phosphor-icons/react';
 import './AboutModal.css';
 
 const AboutModal = ({ isOpen, onClose }) => {
