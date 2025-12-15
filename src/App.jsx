@@ -3,7 +3,7 @@ import './App.css';
 import CustomColorPicker from './CustomColorPicker';
 import AboutModal from './components/AboutModal';
 import MobileNotice from './components/MobileNotice';
-import { generateWave, generateNeurons, generateSpirograph, generateNeuronLine, generateSphere, generateTexturedSphere, generateSoundWave, generateSphereFlow } from './patternGenerators';
+import { generateWave, generateNeurons, generateSpirograph, generateNeuronLine, generateSphere, generateTexturedSphere, generateSoundWave, generateSphereFlow } from './patterns';
 import { ArrowsCounterClockwise, MagnifyingGlassPlus, MagnifyingGlassMinus, MagicWand, Eraser, PenNib, Info, PencilSimple, LineSegments } from '@phosphor-icons/react';
 import DrawIcon from './draw.svg?raw';
 import amplitudeLowIcon from './assets/amplitude-low.svg?raw';
