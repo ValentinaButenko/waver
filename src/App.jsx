@@ -3,8 +3,8 @@ import './App.css';
 import CustomColorPicker from './CustomColorPicker';
 import AboutModal from './components/AboutModal';
 import MobileNotice from './components/MobileNotice';
-import { generateWave, generateNeurons, generateSpirograph, generateNeuronLine, generateSphere, generateTexturedSphere, generateSoundWave, generateSphereFlow } from './patterns';
-import { ArrowsCounterClockwise, MagnifyingGlassPlus, MagnifyingGlassMinus, MagicWand, Eraser, PenNib, Info, PencilSimple, LineSegments } from '@phosphor-icons/react';
+import { generateWave, generateNeurons, generateSpirograph, generateNeuronLine, generateSphere, generateTexturedSphere, generateSoundWave, generateSphereFlow, generateAurora } from './patterns';
+import { ArrowsCounterClockwise, MagnifyingGlassPlus, MagnifyingGlassMinus, MagicWand, Eraser, PenNib, Info, PencilSimple, LineSegments, ArrowCounterClockwise } from '@phosphor-icons/react';
 import DrawIcon from './draw.svg?raw';
 import amplitudeLowIcon from './assets/amplitude-low.svg?raw';
 import amplitudeHighIcon from './assets/amplitude-high.svg?raw';
@@ -153,6 +153,21 @@ const defaultSettings = {
     smoothness: 0.7,
     verticalOffset: 0,
     horizontalOffset: 0
+  },
+  aurora: {
+    width: 1280,
+    height: 1040,
+    color: '#4DFFDF',
+    color2: '#FF1493',
+    opacity: 1.0,
+    dotDensity: 150,
+    flowAmplitude: 80,
+    flowFrequency: 2,
+    bandWidth: 120,
+    turbulence: 0.3,
+    fadeEdges: 0.7,
+    verticalOffset: 0,
+    horizontalOffset: 0
   }
 };
 
@@ -175,16 +190,19 @@ function App() {
   const [texturedSphereSeed, setTexturedSphereSeed] = useState(Math.random());
   const [soundWaveSeed, setSoundWaveSeed] = useState(Math.random());
   const [sphereFlowSeed, setSphereFlowSeed] = useState(Math.random());
+  const [auroraSeed, setAuroraSeed] = useState(Math.random());
   const [isDrawingMode, setIsDrawingMode] = useState(false);
   const [isDrawing, setIsDrawing] = useState(false);
-  const [customPath, setCustomPath] = useState({ wave: [], neuronLine: [] });
+  const [customPath, setCustomPath] = useState({ wave: [], neuronLine: [], aurora: [[]] });
   const [useCustomPath, setUseCustomPath] = useState(false);
   const [showDrawnLine, setShowDrawnLine] = useState(true);
-  const [rotation, setRotation] = useState({ wave: 0, neurons: 0, spirograph: 0, neuronLine: 0, sphere: 0, texturedSphere: 0, soundWave: 0, sphereFlow: 0 });
+  const [rotation, setRotation] = useState({ wave: 0, neurons: 0, spirograph: 0, neuronLine: 0, sphere: 0, texturedSphere: 0, soundWave: 0, sphereFlow: 0, aurora: 0 });
   const [patternScale, setPatternScale] = useState(1);
   const [hasDrawnInCurrentSession, setHasDrawnInCurrentSession] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [draggingNodeIndex, setDraggingNodeIndex] = useState(null);
+  const [draggingAuroraPathIndex, setDraggingAuroraPathIndex] = useState(null);
+  const [undoHistory, setUndoHistory] = useState([]);
   const [tempCanvasWidth, setTempCanvasWidth] = useState('');
   const [tempCanvasHeight, setTempCanvasHeight] = useState('');
   const [generationModeOffsets, setGenerationModeOffsets] = useState({
@@ -195,11 +213,13 @@ function App() {
     sphere: { vertical: 0, horizontal: 0 },
     texturedSphere: { vertical: 0, horizontal: 0 },
     soundWave: { vertical: 0, horizontal: 0 },
-    sphereFlow: { vertical: 0, horizontal: 0 }
+    sphereFlow: { vertical: 0, horizontal: 0 },
+    aurora: { vertical: 0, horizontal: 0 }
   });
   const [drawingModeOffsets, setDrawingModeOffsets] = useState({
     wave: { vertical: 0, horizontal: 0 },
-    neuronLine: { vertical: 0, horizontal: 0 }
+    neuronLine: { vertical: 0, horizontal: 0 },
+    aurora: { vertical: 0, horizontal: 0 }
   });
   const svgRef = useRef(null);
   const canvasRef = useRef(null);
@@ -210,7 +230,17 @@ function App() {
   const getCurrentCustomPath = () => {
     if (selectedPattern === 'wave') return customPath.wave;
     if (selectedPattern === 'neuronLine') return customPath.neuronLine;
+    if (selectedPattern === 'aurora') {
+      // For aurora, return the current path being drawn (last one in the array)
+      const paths = customPath.aurora;
+      return paths[paths.length - 1] || [];
+    }
     return [];
+  };
+  
+  // Get all paths for aurora (for rendering) - only return completed paths with 10+ points
+  const getAllAuroraPaths = () => {
+    return customPath.aurora.filter(path => path && path.length >= 10);
   };
   
   const setCurrentCustomPath = (newPathOrUpdater) => {
@@ -228,12 +258,35 @@ function App() {
           : newPathOrUpdater;
         return { ...prev, neuronLine: newPath };
       });
+    } else if (selectedPattern === 'aurora') {
+      setCustomPath(prev => {
+        const paths = [...prev.aurora];
+        const currentPathIndex = paths.length - 1;
+        
+        if (typeof newPathOrUpdater === 'function') {
+          paths[currentPathIndex] = newPathOrUpdater(paths[currentPathIndex] || []);
+        } else {
+          paths[currentPathIndex] = newPathOrUpdater;
+        }
+        
+        return { ...prev, aurora: paths };
+      });
+    }
+  };
+  
+  // Add a new path for aurora
+  const addNewAuroraPath = () => {
+    if (selectedPattern === 'aurora') {
+      setCustomPath(prev => ({
+        ...prev,
+        aurora: [...prev.aurora, []]
+      }));
     }
   };
 
   // Handle pattern switching - reset drawing mode for patterns that don't support it
   useEffect(() => {
-    if (selectedPattern !== 'wave' && selectedPattern !== 'neuronLine') {
+    if (selectedPattern !== 'wave' && selectedPattern !== 'neuronLine' && selectedPattern !== 'aurora') {
       setIsDrawingMode(false);
       setUseCustomPath(false);
       setIsEditMode(false);
@@ -332,14 +385,17 @@ function App() {
 
   // Generate phase offsets when wave settings change (but not when just dragging)
   useEffect(() => {
-    const layers = currentSettings.layers || 25;
-    const newPhaseOffsets = Array.from({ length: layers }, () => Math.random() * Math.PI * 2);
-    setWavePhaseOffsets(newPhaseOffsets);
+    if (selectedPattern === 'wave') {
+      const layers = currentSettings.layers || 25;
+      const newPhaseOffsets = Array.from({ length: layers }, () => Math.random() * Math.PI * 2);
+      setWavePhaseOffsets(newPhaseOffsets);
+    }
   }, [
-    currentSettings.amplitude,
-    currentSettings.frequency,
-    currentSettings.strokeWidth,
-    currentSettings.layers
+    selectedPattern,
+    currentSettings?.amplitude,
+    currentSettings?.frequency,
+    currentSettings?.strokeWidth,
+    currentSettings?.layers
     // Note: verticalOffset is NOT in the dependency array
   ]);
 
@@ -350,12 +406,12 @@ function App() {
     }
   }, [
     selectedPattern,
-    currentSettings.branches,
-    currentSettings.depth,
-    currentSettings.spread,
-    currentSettings.curvature,
-    currentSettings.nodeSize,
-    currentSettings.branchProbability
+    currentSettings?.branches,
+    currentSettings?.depth,
+    currentSettings?.spread,
+    currentSettings?.curvature,
+    currentSettings?.nodeSize,
+    currentSettings?.branchProbability
     // Note: verticalOffset and horizontalOffset are NOT in the dependency array
   ]);
 
@@ -366,14 +422,14 @@ function App() {
     }
   }, [
     selectedPattern,
-    currentSettings.nodes,
-    currentSettings.branches,
-    currentSettings.depth,
-    currentSettings.spread,
-    currentSettings.curvature,
-    currentSettings.nodeSize,
-    currentSettings.branchProbability,
-    currentSettings.linePosition
+    currentSettings?.nodes,
+    currentSettings?.branches,
+    currentSettings?.depth,
+    currentSettings?.spread,
+    currentSettings?.curvature,
+    currentSettings?.nodeSize,
+    currentSettings?.branchProbability,
+    currentSettings?.linePosition
     // Note: verticalOffset and horizontalOffset are NOT in the dependency array
   ]);
 
@@ -384,12 +440,12 @@ function App() {
     }
   }, [
     selectedPattern,
-    currentSettings.dotDensity,
-    currentSettings.radius,
-    currentSettings.noiseScale,
-    currentSettings.noiseFrequency,
-    currentSettings.waveAmplitude,
-    currentSettings.waveFrequency
+    currentSettings?.dotDensity,
+    currentSettings?.radius,
+    currentSettings?.noiseScale,
+    currentSettings?.noiseFrequency,
+    currentSettings?.waveAmplitude,
+    currentSettings?.waveFrequency
     // Note: verticalOffset and horizontalOffset are NOT in the dependency array
   ]);
 
@@ -400,13 +456,13 @@ function App() {
     }
   }, [
     selectedPattern,
-    currentSettings.columns,
-    currentSettings.dotSize,
-    currentSettings.dotSpacing,
-    currentSettings.amplitude,
-    currentSettings.frequency,
-    currentSettings.waveforms,
-    currentSettings.symmetrical
+    currentSettings?.columns,
+    currentSettings?.dotSize,
+    currentSettings?.dotSpacing,
+    currentSettings?.amplitude,
+    currentSettings?.frequency,
+    currentSettings?.waveforms,
+    currentSettings?.symmetrical
     // Note: verticalOffset and horizontalOffset are NOT in the dependency array
   ]);
 
@@ -417,11 +473,27 @@ function App() {
     }
   }, [
     selectedPattern,
-    currentSettings.lines,
-    currentSettings.distortionStrength,
-    currentSettings.distortionFrequency,
-    currentSettings.noiseScale,
-    currentSettings.smoothness
+    currentSettings?.lines,
+    currentSettings?.distortionStrength,
+    currentSettings?.distortionFrequency,
+    currentSettings?.noiseScale,
+    currentSettings?.smoothness
+    // Note: verticalOffset and horizontalOffset are NOT in the dependency array
+  ]);
+
+  // Generate new seed when magicDust settings change (but not when just dragging)
+  useEffect(() => {
+    if (selectedPattern === 'aurora') {
+      setAuroraSeed(Math.random());
+    }
+  }, [
+    selectedPattern,
+    currentSettings?.dotDensity,
+    currentSettings?.flowAmplitude,
+    currentSettings?.flowFrequency,
+    currentSettings?.bandWidth,
+    currentSettings?.turbulence,
+    currentSettings?.fadeEdges
     // Note: verticalOffset and horizontalOffset are NOT in the dependency array
   ]);
 
@@ -504,7 +576,7 @@ function App() {
 
     const currentPath = getCurrentCustomPath();
     
-    if (isDrawingMode && isEditMode && currentPath.length > 0) {
+    if (isDrawingMode && isEditMode && (currentPath.length > 0 || (selectedPattern === 'aurora' && getAllAuroraPaths().length > 0))) {
       // Apply inverse transformation to mouse coordinates to match node space
       const centerX = currentSettings.width / 2;
       const centerY = currentSettings.height / 2;
@@ -524,18 +596,47 @@ function App() {
       // Check if clicking on a node (account for offsets)
       const nodeRadius = 10;
       const currentDrawingOffsets = drawingModeOffsets[selectedPattern] || { vertical: 0, horizontal: 0 };
-      const clickedNodeIndex = currentPath.findIndex((point) => {
-        const offsetX = point.x + currentDrawingOffsets.horizontal;
-        const offsetY = point.y + currentDrawingOffsets.vertical;
-        const dx = offsetX - transformedX;
-        const dy = offsetY - transformedY;
-        const distance = Math.sqrt(dx * dx + dy * dy);
-        return distance <= nodeRadius;
-      });
+      
+      let clickedNodeIndex = -1;
+      let clickedPathIndex = -1;
+      
+      if (selectedPattern === 'aurora') {
+        // Check all aurora paths for clicked node
+        const allPaths = getAllAuroraPaths();
+        for (let pathIdx = 0; pathIdx < allPaths.length; pathIdx++) {
+          const path = allPaths[pathIdx];
+          const nodeIdx = path.findIndex((point) => {
+            const offsetX = point.x + currentDrawingOffsets.horizontal;
+            const offsetY = point.y + currentDrawingOffsets.vertical;
+            const dx = offsetX - transformedX;
+            const dy = offsetY - transformedY;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            return distance <= nodeRadius;
+          });
+          if (nodeIdx !== -1) {
+            clickedNodeIndex = nodeIdx;
+            clickedPathIndex = pathIdx;
+            break;
+          }
+        }
+      } else {
+        // For single-path patterns (wave, neuronLine)
+        clickedNodeIndex = currentPath.findIndex((point) => {
+          const offsetX = point.x + currentDrawingOffsets.horizontal;
+          const offsetY = point.y + currentDrawingOffsets.vertical;
+          const dx = offsetX - transformedX;
+          const dy = offsetY - transformedY;
+          const distance = Math.sqrt(dx * dx + dy * dy);
+          return distance <= nodeRadius;
+        });
+      }
 
       if (clickedNodeIndex !== -1) {
         // Start dragging a node
         setDraggingNodeIndex(clickedNodeIndex);
+        if (selectedPattern === 'aurora') {
+          setDraggingAuroraPathIndex(clickedPathIndex);
+        }
       } else {
         // No node clicked, start dragging the pattern
         setIsDragging(true);
@@ -546,6 +647,11 @@ function App() {
       }
     } else if (isDrawingMode && !isEditMode && currentPath.length === 0) {
       // First time drawing or no existing path
+      // Save current state to undo history BEFORE starting first path (for aurora)
+      if (selectedPattern === 'aurora' && getAllAuroraPaths().length === 0 && undoHistory.length === 0) {
+        setUndoHistory([JSON.parse(JSON.stringify(customPath.aurora))]);
+      }
+      
       setIsDrawing(true);
       setUseCustomPath(false);  // Don't enable yet - wait until we have enough points
       setShowDrawnLine(true);   // Show red line while drawing
@@ -559,13 +665,42 @@ function App() {
       
       setCurrentCustomPath([{ x: adjustedX, y: adjustedY }]);
     } else if (isDrawingMode && !isEditMode && useCustomPath && currentPath.length > 0) {
-      // Drawing mode with existing pattern - allow dragging
-      const currentDrawingOffsets = drawingModeOffsets[selectedPattern] || { vertical: 0, horizontal: 0 };
-      setIsDragging(true);
-      setDragStartX(e.clientX);
-      setDragStartY(e.clientY);
-      setInitialVerticalOffset(currentDrawingOffsets.vertical);
-      setInitialHorizontalOffset(currentDrawingOffsets.horizontal);
+      // Drawing mode with existing pattern
+      if (selectedPattern === 'aurora') {
+        // For Aurora, start drawing a new path
+        // Save current state to undo history BEFORE adding new path
+        setUndoHistory(prev => {
+          const newHistory = [...prev, JSON.parse(JSON.stringify(customPath.aurora))];
+          // Keep only last 10 states
+          if (newHistory.length > 10) {
+            return newHistory.slice(-10);
+          }
+          return newHistory;
+        });
+        
+        // Apply inverse transformation to account for pattern scale
+        const centerX = currentSettings.width / 2;
+        const centerY = currentSettings.height / 2;
+        const adjustedX = (mouseX - centerX) / patternScale + centerX;
+        const adjustedY = (mouseY - centerY) / patternScale + centerY;
+        
+        // Add new path with first point in one state update
+        setCustomPath(prev => {
+          return { ...prev, aurora: [...prev.aurora, [{ x: adjustedX, y: adjustedY }]] };
+        });
+        
+        setIsDrawing(true);
+        // Keep useCustomPath true to avoid flicker - getAllAuroraPaths() handles all paths
+        setShowDrawnLine(true);   // Show red line while drawing
+      } else {
+        // For other patterns, allow dragging
+        const currentDrawingOffsets = drawingModeOffsets[selectedPattern] || { vertical: 0, horizontal: 0 };
+        setIsDragging(true);
+        setDragStartX(e.clientX);
+        setDragStartY(e.clientY);
+        setInitialVerticalOffset(currentDrawingOffsets.vertical);
+        setInitialHorizontalOffset(currentDrawingOffsets.horizontal);
+      }
     } else if (!isDrawingMode) {
       // Generation mode - allow dragging
       const currentGenOffsets = generationModeOffsets[selectedPattern] || { vertical: 0, horizontal: 0 };
@@ -603,14 +738,30 @@ function App() {
       const transformedY = scaledY + centerY;
       
       // Update the position of the dragged node (remove offset to store original position)
-      const currentPath = getCurrentCustomPath();
       const currentDrawingOffsets = drawingModeOffsets[selectedPattern] || { vertical: 0, horizontal: 0 };
-      const newPath = [...currentPath];
-      newPath[draggingNodeIndex] = { 
-        x: transformedX - currentDrawingOffsets.horizontal, 
-        y: transformedY - currentDrawingOffsets.vertical 
-      };
-      setCurrentCustomPath(newPath);
+      
+      if (selectedPattern === 'aurora' && draggingAuroraPathIndex !== null) {
+        // Update node in specific aurora path
+        setCustomPath(prev => {
+          const allPaths = [...prev.aurora];
+          const pathToEdit = [...allPaths[draggingAuroraPathIndex]];
+          pathToEdit[draggingNodeIndex] = {
+            x: transformedX - currentDrawingOffsets.horizontal,
+            y: transformedY - currentDrawingOffsets.vertical
+          };
+          allPaths[draggingAuroraPathIndex] = pathToEdit;
+          return { ...prev, aurora: allPaths };
+        });
+      } else {
+        // Update node in single path (wave, neuronLine)
+        const currentPath = getCurrentCustomPath();
+        const newPath = [...currentPath];
+        newPath[draggingNodeIndex] = { 
+          x: transformedX - currentDrawingOffsets.horizontal, 
+          y: transformedY - currentDrawingOffsets.vertical 
+        };
+        setCurrentCustomPath(newPath);
+      }
     } else if (isDrawingMode && isDrawing) {
       // Apply inverse transformation to account for pattern scale
       const centerX = currentSettings.width / 2;
@@ -691,6 +842,7 @@ function App() {
   const handleMouseUp = () => {
     if (draggingNodeIndex !== null) {
       setDraggingNodeIndex(null);
+      setDraggingAuroraPathIndex(null);
     } else if (isDrawingMode && isDrawing) {
       setIsDrawing(false);
       // Pattern is already enabled from real-time drawing, just hide the red drawn line
@@ -698,9 +850,18 @@ function App() {
       if (currentPath.length > 10) {
         // Pattern is visible, hide the red drawn line
         setShowDrawnLine(false);
+        // Don't add new aurora path here - wait until user starts drawing again
       } else if (currentPath.length > 0) {
         // If path is too short, keep the drawn line visible but don't generate pattern
-        setUseCustomPath(false);
+        // For Aurora, only disable useCustomPath if there are no completed paths
+        if (selectedPattern === 'aurora') {
+          const completedPaths = getAllAuroraPaths();
+          if (completedPaths.length === 0) {
+            setUseCustomPath(false);
+          }
+        } else {
+          setUseCustomPath(false);
+        }
         setShowDrawnLine(true);
       }
     } else {
@@ -709,17 +870,48 @@ function App() {
   };
 
   const handleClearPath = () => {
-    setCurrentCustomPath([]);
+    if (selectedPattern === 'aurora') {
+      // Reset to one empty path
+      setCustomPath(prev => ({ ...prev, aurora: [[]] }));
+      // Clear undo history
+      setUndoHistory([]);
+    } else {
+      setCurrentCustomPath([]);
+    }
     setUseCustomPath(false);
     setShowDrawnLine(false);
     setHasDrawnInCurrentSession(false);
     setIsEditMode(false);
     setDraggingNodeIndex(null);
+    setDraggingAuroraPathIndex(null);
     // Reset offsets for current pattern only
     setDrawingModeOffsets(prev => ({
       ...prev,
       [selectedPattern]: { vertical: 0, horizontal: 0 }
     }));
+  };
+
+  const handleUndo = () => {
+    if (selectedPattern === 'aurora' && undoHistory.length > 0) {
+      // Get the last state from history
+      const previousState = undoHistory[undoHistory.length - 1];
+      
+      // Restore the previous state
+      setCustomPath(prev => ({ ...prev, aurora: JSON.parse(JSON.stringify(previousState)) }));
+      
+      // Remove the last state from history
+      setUndoHistory(prev => prev.slice(0, -1));
+      
+      // Update UI state based on the restored paths
+      const restoredPaths = previousState.filter(path => path && path.length >= 10);
+      if (restoredPaths.length === 0) {
+        setUseCustomPath(false);
+        setShowDrawnLine(false);
+      } else {
+        setUseCustomPath(true);
+        setShowDrawnLine(isEditMode);
+      }
+    }
   };
 
   const toggleEditMode = () => {
@@ -732,6 +924,7 @@ function App() {
         // Exiting edit mode, hide the red line and reset dragging
         setShowDrawnLine(false);
         setDraggingNodeIndex(null);
+        setDraggingAuroraPathIndex(null);
       }
       return newEditMode;
     });
@@ -792,8 +985,9 @@ function App() {
       verticalOffset: currentOffsets.vertical,
       horizontalOffset: currentOffsets.horizontal,
       color: getColorRef(fillColor, 'line-gradient'),
+      color2: getColorRef(nodeColor, 'node-gradient'),
       nodeColor: getColorRef(nodeColor, 'node-gradient'),
-      customPath: useCustomPath ? getCurrentCustomPath() : null
+      customPath: useCustomPath ? (selectedPattern === 'aurora' ? getAllAuroraPaths() : getCurrentCustomPath()) : (selectedPattern === 'aurora' && isDrawingMode && getAllAuroraPaths().length > 0 ? getAllAuroraPaths() : null)
     };
     
     // Call the appropriate generator based on selected pattern
@@ -812,6 +1006,8 @@ function App() {
       pattern = generateSoundWave(patternSettings, soundWaveSeed);
     } else if (selectedPattern === 'sphereFlow') {
       pattern = generateSphereFlow(patternSettings, sphereFlowSeed);
+    } else if (selectedPattern === 'aurora') {
+      pattern = generateAurora(patternSettings, auroraSeed);
     } else {
       pattern = generateWave(patternSettings, wavePhaseOffsets);
     }
@@ -1169,6 +1365,138 @@ function App() {
               <div className="slider-icon">
                 <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <line x1="20" y1="60" x2="100" y2="60" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="5"/>
+                </svg>
+              </div>
+            </div>
+          </div>
+        </>
+      );
+    } else if (selectedPattern === 'aurora') {
+      return (
+        <>
+          <div className="control-group">
+            <label>Density</label>
+            <div className="slider-container">
+              <div className="slider-icon">
+                <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <circle cx="30" cy="60" r="2" fill="rgba(255, 255, 255, 0.7)"/>
+                  <circle cx="60" cy="60" r="2" fill="rgba(255, 255, 255, 0.7)"/>
+                  <circle cx="90" cy="60" r="2" fill="rgba(255, 255, 255, 0.7)"/>
+                </svg>
+              </div>
+              <input
+                type="range"
+                min="50"
+                max="300"
+                step="10"
+                value={currentSettings.dotDensity}
+                onChange={(e) => updateSetting('dotDensity', e.target.value)}
+              />
+              <div className="slider-icon">
+                <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <circle cx="20" cy="40" r="2" fill="rgba(255, 255, 255, 0.7)"/>
+                  <circle cx="35" cy="45" r="2" fill="rgba(255, 255, 255, 0.7)"/>
+                  <circle cx="30" cy="60" r="2" fill="rgba(255, 255, 255, 0.7)"/>
+                  <circle cx="50" cy="50" r="2" fill="rgba(255, 255, 255, 0.7)"/>
+                  <circle cx="60" cy="65" r="2" fill="rgba(255, 255, 255, 0.7)"/>
+                  <circle cx="70" cy="45" r="2" fill="rgba(255, 255, 255, 0.7)"/>
+                  <circle cx="80" cy="60" r="2" fill="rgba(255, 255, 255, 0.7)"/>
+                  <circle cx="90" cy="50" r="2" fill="rgba(255, 255, 255, 0.7)"/>
+                  <circle cx="100" cy="55" r="2" fill="rgba(255, 255, 255, 0.7)"/>
+                </svg>
+              </div>
+            </div>
+          </div>
+          <div className="control-group">
+            <label>Amplitude</label>
+            <div className="slider-container">
+              <div className="slider-icon">
+                <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M10 60 L110 60" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="3" fill="none"/>
+                </svg>
+              </div>
+              <input
+                type="range"
+                min="20"
+                max="150"
+                step="10"
+                value={currentSettings.flowAmplitude}
+                onChange={(e) => updateSetting('flowAmplitude', e.target.value)}
+              />
+              <div className="slider-icon">
+                <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M10 60 Q40 20, 70 60 T110 60" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="3" fill="none"/>
+                </svg>
+              </div>
+            </div>
+          </div>
+          <div className="control-group">
+            <label>Frequency</label>
+            <div className="slider-container">
+              <div className="slider-icon">
+                <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M10 60 Q40 40, 70 60 T110 60" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="3" fill="none"/>
+                </svg>
+              </div>
+              <input
+                type="range"
+                min="1"
+                max="4"
+                step="0.5"
+                value={currentSettings.flowFrequency}
+                onChange={(e) => updateSetting('flowFrequency', e.target.value)}
+              />
+              <div className="slider-icon">
+                <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M10 60 Q25 40, 40 60 T70 60 T100 60" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="3" fill="none"/>
+                </svg>
+              </div>
+            </div>
+          </div>
+          <div className="control-group">
+            <label>Width</label>
+            <div className="slider-container">
+              <div className="slider-icon">
+                <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M10 55 Q40 50, 70 55 T110 55" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="2" fill="none"/>
+                  <path d="M10 65 Q40 70, 70 65 T110 65" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="2" fill="none"/>
+                </svg>
+              </div>
+              <input
+                type="range"
+                min="60"
+                max="200"
+                step="10"
+                value={currentSettings.bandWidth}
+                onChange={(e) => updateSetting('bandWidth', e.target.value)}
+              />
+              <div className="slider-icon">
+                <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M10 40 Q40 35, 70 40 T110 40" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="2" fill="none"/>
+                  <path d="M10 80 Q40 85, 70 80 T110 80" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="2" fill="none"/>
+                </svg>
+              </div>
+            </div>
+          </div>
+          <div className="control-group">
+            <label>Turbulence</label>
+            <div className="slider-container">
+              <div className="slider-icon">
+                <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M10 60 L110 60" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="3" fill="none"/>
+                </svg>
+              </div>
+              <input
+                type="range"
+                min="0"
+                max="1"
+                step="0.1"
+                value={currentSettings.turbulence}
+                onChange={(e) => updateSetting('turbulence', e.target.value)}
+              />
+              <div className="slider-icon">
+                <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M10 60 Q30 50, 40 65 T60 55 Q70 70, 85 60 T110 65" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="3" fill="none"/>
                 </svg>
               </div>
             </div>
@@ -2025,7 +2353,7 @@ function App() {
             onMouseLeave={handleMouseUp}
             style={{ 
               cursor: draggingNodeIndex !== null ? 'grabbing' : 
-                      (isDrawingMode && !isEditMode && !useCustomPath && getCurrentCustomPath().length === 0 ? 'crosshair' : 
+                      (isDrawingMode && !isEditMode && (selectedPattern === 'aurora' || (!useCustomPath && getCurrentCustomPath().length === 0)) ? 'crosshair' : 
                       (isDrawingMode && isEditMode ? 'pointer' : 
                       (isDragging ? 'grabbing' : 'grab'))),
               position: 'relative',
@@ -2047,13 +2375,13 @@ function App() {
               {includeBackground && (
                 <rect width="100%" height="100%" fill={getColorRef(backgroundColor, 'bg-gradient')} />
               )}
-              {(!isDrawingMode || useCustomPath) && (
+              {(!isDrawingMode || useCustomPath || (isDrawingMode && selectedPattern === 'aurora' && getAllAuroraPaths().length > 0)) && (
                 <g transform={`translate(${currentSettings.width / 2} ${currentSettings.height / 2}) scale(${patternScale}) ${!isDrawingMode ? `rotate(${rotation[selectedPattern]})` : ''} translate(${-currentSettings.width / 2} ${-currentSettings.height / 2})`}>
                   <g dangerouslySetInnerHTML={{ __html: generatePattern() }} />
                 </g>
               )}
             </svg>
-            {isDrawingMode && getCurrentCustomPath().length > 0 && (showDrawnLine || isDrawing) && (
+            {isDrawingMode && (showDrawnLine || isDrawing) && (
               <svg
                 viewBox={`0 0 ${currentSettings.width} ${currentSettings.height}`}
                 style={{
@@ -2069,21 +2397,41 @@ function App() {
                 <g transform={`translate(${currentSettings.width / 2} ${currentSettings.height / 2}) scale(${patternScale}) translate(${-currentSettings.width / 2} ${-currentSettings.height / 2})`}>
                   {(() => {
                     const currentDrawingOffsets = drawingModeOffsets[selectedPattern] || { vertical: 0, horizontal: 0 };
-                    return (
-                      <path
-                        d={`M ${getCurrentCustomPath().map(p => `${p.x + currentDrawingOffsets.horizontal} ${p.y + currentDrawingOffsets.vertical}`).join(' L ')}`}
-                        stroke="#FF0000"
-                        strokeWidth="3"
-                        fill="none"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    );
+                    
+                    if (selectedPattern === 'aurora') {
+                      // Render only the CURRENT aurora path being drawn (last path in array)
+                      const currentPath = getCurrentCustomPath();
+                      if (currentPath.length === 0) return null;
+                      return (
+                        <path
+                          d={`M ${currentPath.map(p => `${p.x + currentDrawingOffsets.horizontal} ${p.y + currentDrawingOffsets.vertical}`).join(' L ')}`}
+                          stroke="#FF0000"
+                          strokeWidth="3"
+                          fill="none"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      );
+                    } else {
+                      // Render single path for other patterns
+                      const currentPath = getCurrentCustomPath();
+                      if (currentPath.length === 0) return null;
+                      return (
+                        <path
+                          d={`M ${currentPath.map(p => `${p.x + currentDrawingOffsets.horizontal} ${p.y + currentDrawingOffsets.vertical}`).join(' L ')}`}
+                          stroke="#FF0000"
+                          strokeWidth="3"
+                          fill="none"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      );
+                    }
                   })()}
                 </g>
               </svg>
             )}
-            {isDrawingMode && isEditMode && getCurrentCustomPath().length > 0 && (
+            {isDrawingMode && isEditMode && (
               <svg
                 viewBox={`0 0 ${currentSettings.width} ${currentSettings.height}`}
                 style={{
@@ -2099,17 +2447,36 @@ function App() {
                 <g transform={`translate(${currentSettings.width / 2} ${currentSettings.height / 2}) scale(${patternScale}) translate(${-currentSettings.width / 2} ${-currentSettings.height / 2})`}>
                   {(() => {
                     const currentDrawingOffsets = drawingModeOffsets[selectedPattern] || { vertical: 0, horizontal: 0 };
-                    return getCurrentCustomPath().map((point, index) => (
-                      <circle
-                        key={index}
-                        cx={point.x + currentDrawingOffsets.horizontal}
-                        cy={point.y + currentDrawingOffsets.vertical}
-                        r={6 / patternScale}
-                        fill="#4DFFDF"
-                        stroke="#FFFFFF"
-                        strokeWidth={1.5 / patternScale}
-                      />
-                    ));
+                    
+                    if (selectedPattern === 'aurora') {
+                      // Render control points for all aurora paths
+                      return getAllAuroraPaths().flatMap((path, pathIndex) => 
+                        path.map((point, pointIndex) => (
+                          <circle
+                            key={`${pathIndex}-${pointIndex}`}
+                            cx={point.x + currentDrawingOffsets.horizontal}
+                            cy={point.y + currentDrawingOffsets.vertical}
+                            r={6 / patternScale}
+                            fill="#4DFFDF"
+                            stroke="#FFFFFF"
+                            strokeWidth={1.5 / patternScale}
+                          />
+                        ))
+                      );
+                    } else {
+                      // Render control points for single path
+                      return getCurrentCustomPath().map((point, index) => (
+                        <circle
+                          key={index}
+                          cx={point.x + currentDrawingOffsets.horizontal}
+                          cy={point.y + currentDrawingOffsets.vertical}
+                          r={6 / patternScale}
+                          fill="#4DFFDF"
+                          stroke="#FFFFFF"
+                          strokeWidth={1.5 / patternScale}
+                        />
+                      ));
+                    }
                   })()}
                 </g>
               </svg>
@@ -2141,7 +2508,7 @@ function App() {
               <MagnifyingGlassMinus size={24} weight="regular" />
             </button>
             
-            {(selectedPattern === 'wave' || selectedPattern === 'neuronLine') && (
+            {(selectedPattern === 'wave' || selectedPattern === 'neuronLine' || selectedPattern === 'aurora') && (
               <>
                 <div className="toolbar-divider"></div>
                 
@@ -2164,7 +2531,10 @@ function App() {
               </>
             )}
 
-            {isDrawingMode && getCurrentCustomPath().length > 0 && (selectedPattern === 'wave' || selectedPattern === 'neuronLine') && (
+            {isDrawingMode && (
+              (selectedPattern === 'aurora' && getAllAuroraPaths().length > 0) ||
+              ((selectedPattern === 'wave' || selectedPattern === 'neuronLine') && getCurrentCustomPath().length > 0)
+            ) && (
               <>
                 <div className="toolbar-divider"></div>
                 
@@ -2183,6 +2553,18 @@ function App() {
                 >
                   <LineSegments size={24} weight="regular" />
                 </button>
+                
+                {selectedPattern === 'aurora' && (
+                  <button 
+                    className="toolbar-icon-button"
+                    onClick={handleUndo}
+                    disabled={undoHistory.length === 0}
+                    title="Undo"
+                    style={{ opacity: undoHistory.length === 0 ? 0.4 : 1 }}
+                  >
+                    <ArrowCounterClockwise size={24} weight="regular" />
+                  </button>
+                )}
               </>
             )}
           </div>
@@ -2288,6 +2670,12 @@ function App() {
               >
                 <img src={spirographPreview} alt="Spirograph" className="pattern-preview" />
                 <span className="pattern-label">Spirograph</span>
+              </button>
+              <button 
+                className={`pattern-button ${selectedPattern === 'aurora' ? 'active' : ''}`}
+                onClick={() => handlePatternChange('aurora')}
+              >
+                <span className="pattern-label">Aurora</span>
               </button>
             </div>
           </div>
