@@ -16,7 +16,8 @@ export const generateAurora = (settings, seed = Math.random()) => {
     fadeEdges = 0.7,        // How much bands fade at edges (0-1)
     verticalOffset = 0,
     horizontalOffset = 0,
-    customPath = null       // Custom drawn path (can be single path or array of paths)
+    customPath = null,      // Custom drawn path (can be single path or array of paths)
+    pathOffsets = null      // Per-path offsets for multiple paths
   } = settings;
   
   // Create seeded random function
@@ -63,11 +64,11 @@ export const generateAurora = (settings, seed = Math.random()) => {
       // Use custom drawn path with smoothing
       let smoothedPath = [...singlePath];
     
-    // Apply Gaussian smoothing
-    const smoothingPasses = 2;
+    // Apply Gaussian smoothing (reduced for better accuracy)
+    const smoothingPasses = 1;
     for (let pass = 0; pass < smoothingPasses; pass++) {
       const tempPath = [];
-      const smoothingWindow = Math.min(15, Math.floor(smoothedPath.length / 8));
+      const smoothingWindow = Math.min(8, Math.floor(smoothedPath.length / 10));
       
       for (let i = 0; i < smoothedPath.length; i++) {
         let sumX = 0, sumY = 0, totalWeight = 0;
@@ -149,6 +150,11 @@ export const generateAurora = (settings, seed = Math.random()) => {
   
   // Generate stacked circles along all base paths
   allBasePaths.forEach((basePath, basePathIndex) => {
+    // Get per-path offset if available
+    const pathOffset = pathOffsets && pathOffsets[basePathIndex] 
+      ? pathOffsets[basePathIndex] 
+      : { horizontal: 0, vertical: 0 };
+    
     for (let pathIndex = 0; pathIndex < basePath.length; pathIndex++) {
       const pathPoint = basePath[pathIndex];
     const t = pathPoint.t;
@@ -215,9 +221,9 @@ export const generateAurora = (settings, seed = Math.random()) => {
       // Add slight horizontal offset for organic look
       const horizontalJitter = (random() - 0.5) * baseCircleSize * 0.5 * turbulence;
       
-      // Final position
-      const x = pathPoint.x + perpX * stackDistance + tangentX * horizontalJitter + horizontalOffset;
-      const y = pathPoint.y + perpY * stackDistance + tangentY * horizontalJitter + verticalOffset;
+      // Final position (including global offset and per-path offset)
+      const x = pathPoint.x + perpX * stackDistance + tangentX * horizontalJitter + horizontalOffset + pathOffset.horizontal;
+      const y = pathPoint.y + perpY * stackDistance + tangentY * horizontalJitter + verticalOffset + pathOffset.vertical;
       
       // Circle size: equal or smaller as we go up
       const sizeReduction = Math.pow(1 - stackProgress, 0.3); // Gradual size reduction

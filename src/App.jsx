@@ -203,6 +203,11 @@ function App() {
   const [draggingNodeIndex, setDraggingNodeIndex] = useState(null);
   const [draggingAuroraPathIndex, setDraggingAuroraPathIndex] = useState(null);
   const [undoHistory, setUndoHistory] = useState([]);
+  const [isModifierKeyHeld, setIsModifierKeyHeld] = useState(false);
+  const [auroraPathOffsets, setAuroraPathOffsets] = useState({});
+  const [draggingSinglePath, setDraggingSinglePath] = useState(null);
+  const [showPathTooltip, setShowPathTooltip] = useState(false);
+  const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
   const [tempCanvasWidth, setTempCanvasWidth] = useState('');
   const [tempCanvasHeight, setTempCanvasHeight] = useState('');
   const [generationModeOffsets, setGenerationModeOffsets] = useState({
@@ -241,6 +246,58 @@ function App() {
   // Get all paths for aurora (for rendering) - only return completed paths with 10+ points
   const getAllAuroraPaths = () => {
     return customPath.aurora.filter(path => path && path.length >= 10);
+  };
+  
+  // Detect OS and return appropriate modifier key name/symbol
+  const getModifierKeyName = () => {
+    const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+    return isMac ? '⌘' : 'Ctrl';
+  };
+  
+  // Detect which Aurora path was clicked or hovered (returns path index or -1 if none)
+  const getClickedAuroraPath = (mouseX, mouseY, threshold = 15) => {
+    const allPaths = getAllAuroraPaths();
+    const currentDrawingOffsets = drawingModeOffsets[selectedPattern] || { vertical: 0, horizontal: 0 };
+    
+    for (let pathIdx = 0; pathIdx < allPaths.length; pathIdx++) {
+      const path = allPaths[pathIdx];
+      const pathOffset = auroraPathOffsets[pathIdx] || { horizontal: 0, vertical: 0 };
+      
+      // Check if mouse is near any segment of the path
+      for (let i = 0; i < path.length - 1; i++) {
+        const p1 = path[i];
+        const p2 = path[i + 1];
+        
+        // Apply offsets
+        const x1 = p1.x + currentDrawingOffsets.horizontal + pathOffset.horizontal;
+        const y1 = p1.y + currentDrawingOffsets.vertical + pathOffset.vertical;
+        const x2 = p2.x + currentDrawingOffsets.horizontal + pathOffset.horizontal;
+        const y2 = p2.y + currentDrawingOffsets.vertical + pathOffset.vertical;
+        
+        // Calculate distance from point to line segment
+        const dx = x2 - x1;
+        const dy = y2 - y1;
+        const length = Math.sqrt(dx * dx + dy * dy);
+        
+        if (length === 0) continue;
+        
+        // Project mouse point onto the line segment
+        const t = Math.max(0, Math.min(1, ((mouseX - x1) * dx + (mouseY - y1) * dy) / (length * length)));
+        const projX = x1 + t * dx;
+        const projY = y1 + t * dy;
+        
+        // Calculate distance from mouse to projected point
+        const distX = mouseX - projX;
+        const distY = mouseY - projY;
+        const distance = Math.sqrt(distX * distX + distY * distY);
+        
+        if (distance <= threshold) {
+          return pathIdx;
+        }
+      }
+    }
+    
+    return -1; // No path clicked
   };
   
   const setCurrentCustomPath = (newPathOrUpdater) => {
@@ -293,6 +350,36 @@ function App() {
       setDraggingNodeIndex(null);
     }
   }, [selectedPattern]);
+
+  // Detect Ctrl (Windows) or Cmd (Mac) key press
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Meta' || e.key === 'Control') {
+        setIsModifierKeyHeld(true);
+      }
+    };
+
+    const handleKeyUp = (e) => {
+      if (e.key === 'Meta' || e.key === 'Control') {
+        setIsModifierKeyHeld(false);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+
+    // Reset modifier key state when window loses focus
+    const handleBlur = () => {
+      setIsModifierKeyHeld(false);
+    };
+    window.addEventListener('blur', handleBlur);
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+      window.removeEventListener('blur', handleBlur);
+    };
+  }, []);
 
   // Helper function to generate SVG gradient definitions
   const generateGradientDefs = () => {
@@ -576,6 +663,65 @@ function App() {
 
     const currentPath = getCurrentCustomPath();
     
+    // Check if Ctrl (Windows) or Cmd (Mac) is held - enable drag mode
+    if (isModifierKeyHeld && isDrawingMode && (currentPath.length > 0 || (selectedPattern === 'aurora' && getAllAuroraPaths().length > 0))) {
+      const currentDrawingOffsets = drawingModeOffsets[selectedPattern] || { vertical: 0, horizontal: 0 };
+      
+      // For Aurora, detect which specific path was clicked
+      if (selectedPattern === 'aurora') {
+        // Save current state to undo history BEFORE starting drag
+        setUndoHistory(prev => {
+          const newHistory = [...prev, {
+            paths: JSON.parse(JSON.stringify(customPath.aurora)),
+            globalOffsets: { ...(drawingModeOffsets.aurora || { vertical: 0, horizontal: 0 }) },
+            pathOffsets: JSON.parse(JSON.stringify(auroraPathOffsets))
+          }];
+          // Keep only last 30 states
+          if (newHistory.length > 30) {
+            return newHistory.slice(-30);
+          }
+          return newHistory;
+        });
+        
+        // Apply inverse transformation to mouse coordinates to match pattern space
+        const centerX = currentSettings.width / 2;
+        const centerY = currentSettings.height / 2;
+        
+        // Translate to origin
+        let transformedMouseX = mouseX - centerX;
+        let transformedMouseY = mouseY - centerY;
+        
+        // Apply inverse scale
+        transformedMouseX = transformedMouseX / patternScale;
+        transformedMouseY = transformedMouseY / patternScale;
+        
+        // Translate back
+        transformedMouseX += centerX;
+        transformedMouseY += centerY;
+        
+        const clickedPathIndex = getClickedAuroraPath(transformedMouseX, transformedMouseY);
+        
+        if (clickedPathIndex !== -1) {
+          // Dragging a specific path
+          setDraggingSinglePath(clickedPathIndex);
+          const pathOffset = auroraPathOffsets[clickedPathIndex] || { horizontal: 0, vertical: 0 };
+          setDragStartX(e.clientX);
+          setDragStartY(e.clientY);
+          setInitialVerticalOffset(pathOffset.vertical);
+          setInitialHorizontalOffset(pathOffset.horizontal);
+          return;
+        }
+      }
+      
+      // Dragging all paths together (clicked on empty space or non-aurora pattern)
+      setIsDragging(true);
+      setDragStartX(e.clientX);
+      setDragStartY(e.clientY);
+      setInitialVerticalOffset(currentDrawingOffsets.vertical);
+      setInitialHorizontalOffset(currentDrawingOffsets.horizontal);
+      return;
+    }
+    
     if (isDrawingMode && isEditMode && (currentPath.length > 0 || (selectedPattern === 'aurora' && getAllAuroraPaths().length > 0))) {
       // Apply inverse transformation to mouse coordinates to match node space
       const centerX = currentSettings.width / 2;
@@ -649,7 +795,11 @@ function App() {
       // First time drawing or no existing path
       // Save current state to undo history BEFORE starting first path (for aurora)
       if (selectedPattern === 'aurora' && getAllAuroraPaths().length === 0 && undoHistory.length === 0) {
-        setUndoHistory([JSON.parse(JSON.stringify(customPath.aurora))]);
+        setUndoHistory([{
+          paths: JSON.parse(JSON.stringify(customPath.aurora)),
+          globalOffsets: { ...(drawingModeOffsets.aurora || { vertical: 0, horizontal: 0 }) },
+          pathOffsets: JSON.parse(JSON.stringify(auroraPathOffsets))
+        }]);
       }
       
       setIsDrawing(true);
@@ -670,10 +820,14 @@ function App() {
         // For Aurora, start drawing a new path
         // Save current state to undo history BEFORE adding new path
         setUndoHistory(prev => {
-          const newHistory = [...prev, JSON.parse(JSON.stringify(customPath.aurora))];
-          // Keep only last 10 states
-          if (newHistory.length > 10) {
-            return newHistory.slice(-10);
+          const newHistory = [...prev, {
+            paths: JSON.parse(JSON.stringify(customPath.aurora)),
+            globalOffsets: { ...(drawingModeOffsets.aurora || { vertical: 0, horizontal: 0 }) },
+            pathOffsets: JSON.parse(JSON.stringify(auroraPathOffsets))
+          }];
+          // Keep only last 30 states
+          if (newHistory.length > 30) {
+            return newHistory.slice(-30);
           }
           return newHistory;
         });
@@ -790,6 +944,31 @@ function App() {
         }
         return prev;
       });
+    } else if (draggingSinglePath !== null) {
+      // Dragging a single Aurora path
+      const rect = canvasRef.current.getBoundingClientRect();
+      const scaleX = currentSettings.width / rect.width;
+      const scaleY = currentSettings.height / rect.height;
+      
+      // Get screen space deltas
+      const screenDeltaX = (e.clientX - dragStartX) * scaleX;
+      const screenDeltaY = (e.clientY - dragStartY) * scaleY;
+      
+      // Account for pattern scale when calculating offsets
+      const scaledDeltaX = screenDeltaX / patternScale;
+      const scaledDeltaY = screenDeltaY / patternScale;
+      
+      const newVerticalOffset = initialVerticalOffset + scaledDeltaY;
+      const newHorizontalOffset = initialHorizontalOffset + scaledDeltaX;
+      
+      // Update offset for this specific path only
+      setAuroraPathOffsets(prev => ({
+        ...prev,
+        [draggingSinglePath]: {
+          vertical: newVerticalOffset,
+          horizontal: newHorizontalOffset
+        }
+      }));
     } else if (isDragging) {
       // Get the scale factor to convert screen space to canvas space
       const rect = canvasRef.current.getBoundingClientRect();
@@ -836,13 +1015,47 @@ function App() {
           }
         }));
       }
+    } else if (selectedPattern === 'aurora' && isDrawingMode && !isEditMode && !isModifierKeyHeld && getAllAuroraPaths().length > 0) {
+      // Check if hovering over a path to show tooltip
+      const rect = canvasRef.current.getBoundingClientRect();
+      const scaleX = currentSettings.width / rect.width;
+      const scaleY = currentSettings.height / rect.height;
+      let mouseX = (e.clientX - rect.left) * scaleX;
+      let mouseY = (e.clientY - rect.top) * scaleY;
+      
+      // Apply inverse transformation to mouse coordinates
+      const centerX = currentSettings.width / 2;
+      const centerY = currentSettings.height / 2;
+      let transformedMouseX = mouseX - centerX;
+      let transformedMouseY = mouseY - centerY;
+      transformedMouseX = transformedMouseX / patternScale;
+      transformedMouseY = transformedMouseY / patternScale;
+      transformedMouseX += centerX;
+      transformedMouseY += centerY;
+      
+      // Use larger threshold (40px) for hover detection to make it easier to trigger tooltip
+      const hoveredPathIndex = getClickedAuroraPath(transformedMouseX, transformedMouseY, 40);
+      
+      if (hoveredPathIndex !== -1) {
+        setShowPathTooltip(true);
+        setTooltipPosition({ x: e.clientX, y: e.clientY });
+      } else {
+        setShowPathTooltip(false);
+      }
+    } else {
+      setShowPathTooltip(false);
     }
   };
 
   const handleMouseUp = () => {
+    // Hide tooltip when mouse is released or leaves
+    setShowPathTooltip(false);
+    
     if (draggingNodeIndex !== null) {
       setDraggingNodeIndex(null);
       setDraggingAuroraPathIndex(null);
+    } else if (draggingSinglePath !== null) {
+      setDraggingSinglePath(null);
     } else if (isDrawingMode && isDrawing) {
       setIsDrawing(false);
       // Pattern is already enabled from real-time drawing, just hide the red drawn line
@@ -875,6 +1088,8 @@ function App() {
       setCustomPath(prev => ({ ...prev, aurora: [[]] }));
       // Clear undo history
       setUndoHistory([]);
+      // Clear per-path offsets
+      setAuroraPathOffsets({});
     } else {
       setCurrentCustomPath([]);
     }
@@ -896,14 +1111,19 @@ function App() {
       // Get the last state from history
       const previousState = undoHistory[undoHistory.length - 1];
       
-      // Restore the previous state
-      setCustomPath(prev => ({ ...prev, aurora: JSON.parse(JSON.stringify(previousState)) }));
+      // Restore the previous state - paths, global offsets, and per-path offsets
+      setCustomPath(prev => ({ ...prev, aurora: JSON.parse(JSON.stringify(previousState.paths)) }));
+      setDrawingModeOffsets(prev => ({
+        ...prev,
+        aurora: { ...previousState.globalOffsets }
+      }));
+      setAuroraPathOffsets(JSON.parse(JSON.stringify(previousState.pathOffsets)));
       
       // Remove the last state from history
       setUndoHistory(prev => prev.slice(0, -1));
       
       // Update UI state based on the restored paths
-      const restoredPaths = previousState.filter(path => path && path.length >= 10);
+      const restoredPaths = previousState.paths.filter(path => path && path.length >= 10);
       if (restoredPaths.length === 0) {
         setUseCustomPath(false);
         setShowDrawnLine(false);
@@ -980,6 +1200,15 @@ function App() {
       ? (drawingModeOffsets[selectedPattern] || { vertical: 0, horizontal: 0 })
       : (generationModeOffsets[selectedPattern] || { vertical: 0, horizontal: 0 });
     
+    // Debug: Log offsets for Aurora in drawing mode
+    if (selectedPattern === 'aurora' && isDrawingMode) {
+      console.log('🎨 Aurora Pattern Offsets:', {
+        globalOffsets: currentOffsets,
+        pathOffsets: auroraPathOffsets,
+        pathCount: getAllAuroraPaths().length
+      });
+    }
+    
     const patternSettings = { 
       ...currentSettings,
       verticalOffset: currentOffsets.vertical,
@@ -987,7 +1216,9 @@ function App() {
       color: getColorRef(fillColor, 'line-gradient'),
       color2: getColorRef(nodeColor, 'node-gradient'),
       nodeColor: getColorRef(nodeColor, 'node-gradient'),
-      customPath: useCustomPath ? (selectedPattern === 'aurora' ? getAllAuroraPaths() : getCurrentCustomPath()) : (selectedPattern === 'aurora' && isDrawingMode && getAllAuroraPaths().length > 0 ? getAllAuroraPaths() : null)
+      customPath: useCustomPath ? (selectedPattern === 'aurora' ? getAllAuroraPaths() : getCurrentCustomPath()) : (selectedPattern === 'aurora' && isDrawingMode && getAllAuroraPaths().length > 0 ? getAllAuroraPaths() : null),
+      // Pass per-path offsets for Aurora pattern
+      pathOffsets: selectedPattern === 'aurora' ? auroraPathOffsets : null
     };
     
     // Call the appropriate generator based on selected pattern
@@ -2353,9 +2584,11 @@ function App() {
             onMouseLeave={handleMouseUp}
             style={{ 
               cursor: draggingNodeIndex !== null ? 'grabbing' : 
+                      (draggingSinglePath !== null ? 'grabbing' :
+                      (isDragging ? 'grabbing' : 
+                      (isModifierKeyHeld && isDrawingMode && (getCurrentCustomPath().length > 0 || (selectedPattern === 'aurora' && getAllAuroraPaths().length > 0)) ? 'grab' :
                       (isDrawingMode && !isEditMode && (selectedPattern === 'aurora' || (!useCustomPath && getCurrentCustomPath().length === 0)) ? 'crosshair' : 
-                      (isDrawingMode && isEditMode ? 'pointer' : 
-                      (isDragging ? 'grabbing' : 'grab'))),
+                      (isDrawingMode && isEditMode ? 'pointer' : 'grab'))))),
               position: 'relative',
               width: `min(calc(100vw - 180px - 300px - 48px), calc((100vh - 128px) * ${currentSettings.width / currentSettings.height}))`,
               height: `min(calc(100vh - 128px), calc((100vw - 180px - 300px - 48px) * ${currentSettings.height / currentSettings.width}))`,
@@ -2449,20 +2682,21 @@ function App() {
                     const currentDrawingOffsets = drawingModeOffsets[selectedPattern] || { vertical: 0, horizontal: 0 };
                     
                     if (selectedPattern === 'aurora') {
-                      // Render control points for all aurora paths
-                      return getAllAuroraPaths().flatMap((path, pathIndex) => 
-                        path.map((point, pointIndex) => (
+                      // Render control points for all aurora paths with per-path offsets
+                      return getAllAuroraPaths().flatMap((path, pathIndex) => {
+                        const pathOffset = auroraPathOffsets[pathIndex] || { horizontal: 0, vertical: 0 };
+                        return path.map((point, pointIndex) => (
                           <circle
                             key={`${pathIndex}-${pointIndex}`}
-                            cx={point.x + currentDrawingOffsets.horizontal}
-                            cy={point.y + currentDrawingOffsets.vertical}
+                            cx={point.x + currentDrawingOffsets.horizontal + pathOffset.horizontal}
+                            cy={point.y + currentDrawingOffsets.vertical + pathOffset.vertical}
                             r={6 / patternScale}
                             fill="#4DFFDF"
                             stroke="#FFFFFF"
                             strokeWidth={1.5 / patternScale}
                           />
-                        ))
-                      );
+                        ));
+                      });
                     } else {
                       // Render control points for single path
                       return getCurrentCustomPath().map((point, index) => (
@@ -2482,6 +2716,32 @@ function App() {
               </svg>
             )}
           </div>
+          
+          {/* Tooltip for dragging paths - Outside canvas wrapper to avoid transform issues */}
+          {showPathTooltip && (
+            <div
+              style={{
+                position: 'fixed',
+                left: `${tooltipPosition.x}px`,
+                top: `${tooltipPosition.y + 15}px`,
+                transform: 'translateX(-50%)',
+                background: 'rgba(19, 19, 51, 0.7)',
+                backdropFilter: 'blur(10px)',
+                color: 'rgba(255, 255, 255, 0.6)',
+                padding: '8px 12px',
+                borderRadius: '6px',
+                fontSize: '10pt',
+                fontFamily: "'GT Welsheim Pro', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+                fontWeight: '500',
+                pointerEvents: 'none',
+                zIndex: 1000,
+                whiteSpace: 'nowrap',
+                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3)'
+              }}
+            >
+              Hold {getModifierKeyName()} to drag
+            </div>
+          )}
           
           <div className="floating-toolbar">
             <button 
