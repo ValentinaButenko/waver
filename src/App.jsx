@@ -20,6 +20,7 @@ import neuronsPreview from './assets/neuron cell.png';
 import spherePreview from './assets/sphere.png';
 import dotSpherePreview from './assets/dot sphere.png';
 import spirographPreview from './assets/spirograph.png';
+import auroraPreview from './assets/aurora.png';
 
 const defaultSettings = {
   wave: {
@@ -160,11 +161,11 @@ const defaultSettings = {
     color: '#4DFFDF',
     color2: '#FF1493',
     opacity: 1.0,
-    dotDensity: 150,
+    dotDensity: 190,
     flowAmplitude: 80,
-    flowFrequency: 2,
-    bandWidth: 120,
-    turbulence: 0.3,
+    flowFrequency: 1,
+    bandWidth: 160,
+    turbulence: 0.7,
     fadeEdges: 0.7,
     verticalOffset: 0,
     horizontalOffset: 0
@@ -579,7 +580,6 @@ function App() {
     currentSettings?.flowAmplitude,
     currentSettings?.flowFrequency,
     currentSettings?.bandWidth,
-    currentSettings?.turbulence,
     currentSettings?.fadeEdges
     // Note: verticalOffset and horizontalOffset are NOT in the dependency array
   ]);
@@ -1610,30 +1610,32 @@ function App() {
             <div className="slider-container">
               <div className="slider-icon">
                 <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <circle cx="30" cy="60" r="2" fill="rgba(255, 255, 255, 0.7)"/>
-                  <circle cx="60" cy="60" r="2" fill="rgba(255, 255, 255, 0.7)"/>
-                  <circle cx="90" cy="60" r="2" fill="rgba(255, 255, 255, 0.7)"/>
+                  <circle cx="30" cy="60" r="3" fill="rgba(255, 255, 255, 0.7)"/>
+                  <circle cx="50" cy="60" r="3" fill="rgba(255, 255, 255, 0.7)"/>
+                  <circle cx="70" cy="60" r="3" fill="rgba(255, 255, 255, 0.7)"/>
+                  <circle cx="90" cy="60" r="3" fill="rgba(255, 255, 255, 0.7)"/>
                 </svg>
               </div>
               <input
                 type="range"
-                min="50"
-                max="300"
+                min="80"
+                max="250"
                 step="10"
                 value={currentSettings.dotDensity}
                 onChange={(e) => updateSetting('dotDensity', e.target.value)}
               />
               <div className="slider-icon">
                 <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <circle cx="20" cy="40" r="2" fill="rgba(255, 255, 255, 0.7)"/>
-                  <circle cx="35" cy="45" r="2" fill="rgba(255, 255, 255, 0.7)"/>
-                  <circle cx="30" cy="60" r="2" fill="rgba(255, 255, 255, 0.7)"/>
-                  <circle cx="50" cy="50" r="2" fill="rgba(255, 255, 255, 0.7)"/>
-                  <circle cx="60" cy="65" r="2" fill="rgba(255, 255, 255, 0.7)"/>
-                  <circle cx="70" cy="45" r="2" fill="rgba(255, 255, 255, 0.7)"/>
-                  <circle cx="80" cy="60" r="2" fill="rgba(255, 255, 255, 0.7)"/>
-                  <circle cx="90" cy="50" r="2" fill="rgba(255, 255, 255, 0.7)"/>
-                  <circle cx="100" cy="55" r="2" fill="rgba(255, 255, 255, 0.7)"/>
+                  <circle cx="20" cy="60" r="2" fill="rgba(255, 255, 255, 0.7)"/>
+                  <circle cx="28" cy="60" r="2" fill="rgba(255, 255, 255, 0.7)"/>
+                  <circle cx="36" cy="60" r="2" fill="rgba(255, 255, 255, 0.7)"/>
+                  <circle cx="44" cy="60" r="2" fill="rgba(255, 255, 255, 0.7)"/>
+                  <circle cx="52" cy="60" r="2" fill="rgba(255, 255, 255, 0.7)"/>
+                  <circle cx="60" cy="60" r="2" fill="rgba(255, 255, 255, 0.7)"/>
+                  <circle cx="68" cy="60" r="2" fill="rgba(255, 255, 255, 0.7)"/>
+                  <circle cx="76" cy="60" r="2" fill="rgba(255, 255, 255, 0.7)"/>
+                  <circle cx="84" cy="60" r="2" fill="rgba(255, 255, 255, 0.7)"/>
+                  <circle cx="92" cy="60" r="2" fill="rgba(255, 255, 255, 0.7)"/>
                 </svg>
               </div>
             </div>
@@ -1643,7 +1645,7 @@ function App() {
             <div className="slider-container">
               <div className="slider-icon">
                 <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M10 60 L110 60" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="3" fill="none"/>
+                  <path d="M16.5 60C16.5 60 29.1998 68 38.25 68C47.3002 68 52 64.5 60 60C68 55.5 72.6998 52 81.75 52C90.8002 52 103.5 60 103.5 60" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="5" strokeLinecap="round"/>
                 </svg>
               </div>
               <input
@@ -1656,7 +1658,7 @@ function App() {
               />
               <div className="slider-icon">
                 <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M10 60 Q40 20, 70 60 T110 60" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="3" fill="none"/>
+                  <path d="M16.5 60C16.5 60 27.5 92 38.25 92C49 92 56.5 70 60 60C63.5 50 71.5 28 81.75 28C92 28 103.5 60 103.5 60" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="5" strokeLinecap="round"/>
                 </svg>
               </div>
             </div>
@@ -1666,20 +1668,20 @@ function App() {
             <div className="slider-container">
               <div className="slider-icon">
                 <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M10 60 Q40 40, 70 60 T110 60" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="3" fill="none"/>
+                  <path d="M16.5 60C16.5 60 29.25 59.5 38.5 61.5C47.75 63.5001 50 67 60 67C70 67 71.75 63.5 82 61.5C92.25 59.5 103.5 60 103.5 60" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="5" strokeLinecap="round"/>
                 </svg>
               </div>
               <input
                 type="range"
                 min="1"
-                max="4"
+                max="3"
                 step="0.5"
                 value={currentSettings.flowFrequency}
                 onChange={(e) => updateSetting('flowFrequency', e.target.value)}
               />
               <div className="slider-icon">
                 <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M10 60 Q25 40, 40 60 T70 60 T100 60" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="3" fill="none"/>
+                  <path d="M104 76C104 76 96.0875 71 93.0625 60C91 52.5 89.6938 44 82.125 44C74.5562 44 71.1875 60 71.1875 60C71.1875 60 67.8188 76 60.25 76C52.6812 76 49.3125 60 49.3125 60C49.3125 60 45.9438 44 38.375 44C30.8062 44 29.5 53 27.4375 60C24.0491 71.5 16.5 76 16.5 76" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="5" strokeLinecap="round"/>
                 </svg>
               </div>
             </div>
@@ -1689,45 +1691,45 @@ function App() {
             <div className="slider-container">
               <div className="slider-icon">
                 <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M10 55 Q40 50, 70 55 T110 55" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="2" fill="none"/>
-                  <path d="M10 65 Q40 70, 70 65 T110 65" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="2" fill="none"/>
+                  <circle cx="30" cy="50" r="3" fill="rgba(255, 255, 255, 0.7)"/>
+                  <circle cx="30" cy="60" r="3" fill="rgba(255, 255, 255, 0.7)"/>
+                  <circle cx="30" cy="70" r="3" fill="rgba(255, 255, 255, 0.7)"/>
+                  <circle cx="60" cy="50" r="3" fill="rgba(255, 255, 255, 0.7)"/>
+                  <circle cx="60" cy="60" r="3" fill="rgba(255, 255, 255, 0.7)"/>
+                  <circle cx="60" cy="70" r="3" fill="rgba(255, 255, 255, 0.7)"/>
+                  <circle cx="90" cy="50" r="3" fill="rgba(255, 255, 255, 0.7)"/>
+                  <circle cx="90" cy="60" r="3" fill="rgba(255, 255, 255, 0.7)"/>
+                  <circle cx="90" cy="70" r="3" fill="rgba(255, 255, 255, 0.7)"/>
                 </svg>
               </div>
               <input
                 type="range"
                 min="60"
-                max="200"
+                max="300"
                 step="10"
                 value={currentSettings.bandWidth}
                 onChange={(e) => updateSetting('bandWidth', e.target.value)}
               />
               <div className="slider-icon">
                 <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M10 40 Q40 35, 70 40 T110 40" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="2" fill="none"/>
-                  <path d="M10 80 Q40 85, 70 80 T110 80" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="2" fill="none"/>
-                </svg>
-              </div>
-            </div>
-          </div>
-          <div className="control-group">
-            <label>Turbulence</label>
-            <div className="slider-container">
-              <div className="slider-icon">
-                <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M10 60 L110 60" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="3" fill="none"/>
-                </svg>
-              </div>
-              <input
-                type="range"
-                min="0"
-                max="1"
-                step="0.1"
-                value={currentSettings.turbulence}
-                onChange={(e) => updateSetting('turbulence', e.target.value)}
-              />
-              <div className="slider-icon">
-                <svg width="20" height="20" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M10 60 Q30 50, 40 65 T60 55 Q70 70, 85 60 T110 65" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="3" fill="none"/>
+                  <circle cx="30" cy="20" r="3" fill="rgba(255, 255, 255, 0.7)"/>
+                  <circle cx="30" cy="35" r="3" fill="rgba(255, 255, 255, 0.7)"/>
+                  <circle cx="30" cy="50" r="3" fill="rgba(255, 255, 255, 0.7)"/>
+                  <circle cx="30" cy="65" r="3" fill="rgba(255, 255, 255, 0.7)"/>
+                  <circle cx="30" cy="80" r="3" fill="rgba(255, 255, 255, 0.7)"/>
+                  <circle cx="30" cy="95" r="3" fill="rgba(255, 255, 255, 0.7)"/>
+                  <circle cx="60" cy="20" r="3" fill="rgba(255, 255, 255, 0.7)"/>
+                  <circle cx="60" cy="35" r="3" fill="rgba(255, 255, 255, 0.7)"/>
+                  <circle cx="60" cy="50" r="3" fill="rgba(255, 255, 255, 0.7)"/>
+                  <circle cx="60" cy="65" r="3" fill="rgba(255, 255, 255, 0.7)"/>
+                  <circle cx="60" cy="80" r="3" fill="rgba(255, 255, 255, 0.7)"/>
+                  <circle cx="60" cy="95" r="3" fill="rgba(255, 255, 255, 0.7)"/>
+                  <circle cx="90" cy="20" r="3" fill="rgba(255, 255, 255, 0.7)"/>
+                  <circle cx="90" cy="35" r="3" fill="rgba(255, 255, 255, 0.7)"/>
+                  <circle cx="90" cy="50" r="3" fill="rgba(255, 255, 255, 0.7)"/>
+                  <circle cx="90" cy="65" r="3" fill="rgba(255, 255, 255, 0.7)"/>
+                  <circle cx="90" cy="80" r="3" fill="rgba(255, 255, 255, 0.7)"/>
+                  <circle cx="90" cy="95" r="3" fill="rgba(255, 255, 255, 0.7)"/>
                 </svg>
               </div>
             </div>
@@ -2890,6 +2892,13 @@ function App() {
                 <span className="pattern-label">Sound Wave</span>
               </button>
               <button 
+                className={`pattern-button ${selectedPattern === 'aurora' ? 'active' : ''}`}
+                onClick={() => handlePatternChange('aurora')}
+              >
+                <img src={auroraPreview} alt="Aurora" className="pattern-preview" />
+                <span className="pattern-label">Aurora</span>
+              </button>
+              <button 
                 className={`pattern-button ${selectedPattern === 'sphereFlow' ? 'active' : ''}`}
                 onClick={() => handlePatternChange('sphereFlow')}
               >
@@ -2911,13 +2920,6 @@ function App() {
                 <span className="pattern-label">Neurons</span>
               </button>
               <button 
-                className={`pattern-button ${selectedPattern === 'sphere' ? 'active' : ''}`}
-                onClick={() => handlePatternChange('sphere')}
-              >
-                <img src={spherePreview} alt="Sphere" className="pattern-preview" />
-                <span className="pattern-label">Sphere</span>
-              </button>
-              <button 
                 className={`pattern-button ${selectedPattern === 'texturedSphere' ? 'active' : ''}`}
                 onClick={() => handlePatternChange('texturedSphere')}
               >
@@ -2925,17 +2927,18 @@ function App() {
                 <span className="pattern-label">Dot Sphere</span>
               </button>
               <button 
+                className={`pattern-button ${selectedPattern === 'sphere' ? 'active' : ''}`}
+                onClick={() => handlePatternChange('sphere')}
+              >
+                <img src={spherePreview} alt="Sphere" className="pattern-preview" />
+                <span className="pattern-label">Sphere</span>
+              </button>
+              <button 
                 className={`pattern-button ${selectedPattern === 'spirograph' ? 'active' : ''}`}
                 onClick={() => handlePatternChange('spirograph')}
               >
                 <img src={spirographPreview} alt="Spirograph" className="pattern-preview" />
                 <span className="pattern-label">Spirograph</span>
-              </button>
-              <button 
-                className={`pattern-button ${selectedPattern === 'aurora' ? 'active' : ''}`}
-                onClick={() => handlePatternChange('aurora')}
-              >
-                <span className="pattern-label">Aurora</span>
               </button>
             </div>
           </div>
@@ -2992,17 +2995,18 @@ function App() {
               supportsGradient={false}
             />
             <CustomColorPicker
-              label="Line"
+              label={selectedPattern === 'aurora' ? 'Base Line' : 'Line'}
               color={fillColor}
               onChange={setFillColor}
               supportsGradient={true}
             />
-            {(selectedPattern === 'neurons' || selectedPattern === 'neuronLine') && (
+            {/* Show second color picker for aurora (Halo), neurons, and neuronLine (Node) */}
+            {(selectedPattern === 'neurons' || selectedPattern === 'neuronLine' || selectedPattern === 'aurora') && (
               <CustomColorPicker
-                label="Node"
+                label={selectedPattern === 'aurora' ? 'Halo' : 'Node'}
                 color={nodeColor}
                 onChange={setNodeColor}
-                supportsGradient={false}
+                supportsGradient={selectedPattern === 'aurora'}
               />
             )}
           </div>
