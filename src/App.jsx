@@ -1181,6 +1181,91 @@ function App() {
     }));
   };
 
+  const resetPatternToDefault = () => {
+    // Reset the current pattern's settings to default
+    setSettings((prev) => ({
+      ...prev,
+      [selectedPattern]: {
+        ...defaultSettings[selectedPattern]
+      }
+    }));
+  };
+
+  // Define position-related properties for each pattern
+  const positionProperties = ['rotateX', 'rotateY', 'rotateZ', 'depth'];
+
+  // Check if shape settings are at default (excluding position properties)
+  const isShapeAtDefault = () => {
+    const current = settings[selectedPattern];
+    const defaults = defaultSettings[selectedPattern];
+    
+    for (const key in current) {
+      // Skip position properties and size properties
+      if (positionProperties.includes(key) || key === 'width' || key === 'height') {
+        continue;
+      }
+      if (current[key] !== defaults[key]) {
+        return false;
+      }
+    }
+    return true;
+  };
+
+  // Check if position settings are at default
+  const isPositionAtDefault = () => {
+    const current = settings[selectedPattern];
+    const defaults = defaultSettings[selectedPattern];
+    
+    for (const key of positionProperties) {
+      if (current[key] !== undefined && current[key] !== defaults[key]) {
+        return false;
+      }
+    }
+    return true;
+  };
+
+  // Reset only shape-related settings (preserve position)
+  const resetShapeSettings = () => {
+    setSettings((prev) => {
+      const current = prev[selectedPattern];
+      const defaults = defaultSettings[selectedPattern];
+      const newSettings = { ...current };
+      
+      // Reset all properties except position and size
+      for (const key in defaults) {
+        if (!positionProperties.includes(key) && key !== 'width' && key !== 'height') {
+          newSettings[key] = defaults[key];
+        }
+      }
+      
+      return {
+        ...prev,
+        [selectedPattern]: newSettings
+      };
+    });
+  };
+
+  // Reset only position-related settings
+  const resetPositionSettings = () => {
+    setSettings((prev) => {
+      const current = prev[selectedPattern];
+      const defaults = defaultSettings[selectedPattern];
+      const newSettings = { ...current };
+      
+      // Reset only position properties
+      for (const key of positionProperties) {
+        if (defaults[key] !== undefined) {
+          newSettings[key] = defaults[key];
+        }
+      }
+      
+      return {
+        ...prev,
+        [selectedPattern]: newSettings
+      };
+    });
+  };
+
   const handleZoomIn = () => {
     setPatternScale((prev) => Math.min(prev * 1.1, 3));
   };
@@ -2930,18 +3015,18 @@ function App() {
                 <span className="pattern-label">Dot Sphere</span>
               </button>
               <button 
-                className={`pattern-button ${selectedPattern === 'sphere' ? 'active' : ''}`}
-                onClick={() => handlePatternChange('sphere')}
-              >
-                <img src={spherePreview} alt="Sphere" className="pattern-preview" />
-                <span className="pattern-label">Sphere</span>
-              </button>
-              <button 
                 className={`pattern-button ${selectedPattern === 'spirograph' ? 'active' : ''}`}
                 onClick={() => handlePatternChange('spirograph')}
               >
                 <img src={spirographPreview} alt="Spirograph" className="pattern-preview" />
                 <span className="pattern-label">Spirograph</span>
+              </button>
+              <button 
+                className={`pattern-button ${selectedPattern === 'sphere' ? 'active' : ''}`}
+                onClick={() => handlePatternChange('sphere')}
+              >
+                <img src={spherePreview} alt="Sphere" className="pattern-preview" />
+                <span className="pattern-label">Sphere</span>
               </button>
             </div>
           </div>
@@ -3016,13 +3101,33 @@ function App() {
         </div>
 
           <div className="panel-section">
-            <h2>Shape</h2>
+            <div className="section-header-with-button">
+              <h2>Shape</h2>
+              <button 
+                className="reset-section-button" 
+                onClick={resetShapeSettings}
+                disabled={isShapeAtDefault()}
+                title="Reset shape settings to default"
+              >
+                <ArrowCounterClockwise size={16} weight="regular" />
+              </button>
+            </div>
             {renderControls()}
           </div>
 
           {(selectedPattern === 'spirograph' || selectedPattern === 'sphere' || selectedPattern === 'texturedSphere') && (
             <div className="panel-section">
-              <h2>Position</h2>
+              <div className="section-header-with-button">
+                <h2>Position</h2>
+                <button 
+                  className="reset-section-button" 
+                  onClick={resetPositionSettings}
+                  disabled={isPositionAtDefault()}
+                  title="Reset position settings to default"
+                >
+                  <ArrowCounterClockwise size={16} weight="regular" />
+                </button>
+              </div>
               {selectedPattern === 'spirograph' && (
                 <div className="control-group">
                   <label>Depth</label>

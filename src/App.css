@@ -196,6 +196,49 @@ button:active {
   letter-spacing: 1px;
 }
 
+.section-header-with-button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 5px;
+}
+
+.section-header-with-button h2 {
+  margin-bottom: 0;
+}
+
+.reset-section-button {
+  padding: 6px;
+  background: unset;
+  border: none;
+  border-radius: 6px;
+  color: rgba(255, 255, 255, 0.7);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.reset-section-button:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.reset-section-button:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+  background: unset;
+  color: rgba(255, 255, 255, 0.3);
+}
+
+.reset-section-button:disabled:hover {
+  background: unset;
+  color: rgba(255, 255, 255, 0.3);
+  border-color: transparent;
+}
+
 .pattern-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
