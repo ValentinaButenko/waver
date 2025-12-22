@@ -1216,6 +1216,9 @@ function App() {
       color: getColorRef(fillColor, 'line-gradient'),
       color2: getColorRef(nodeColor, 'node-gradient'),
       nodeColor: getColorRef(nodeColor, 'node-gradient'),
+      // For aurora pattern, pass actual color data for gradient support
+      colorData: selectedPattern === 'aurora' ? fillColor : undefined,
+      color2Data: selectedPattern === 'aurora' ? nodeColor : undefined,
       customPath: useCustomPath ? (selectedPattern === 'aurora' ? getAllAuroraPaths() : getCurrentCustomPath()) : (selectedPattern === 'aurora' && isDrawingMode && getAllAuroraPaths().length > 0 ? getAllAuroraPaths() : null),
       // Pass per-path offsets for Aurora pattern
       pathOffsets: selectedPattern === 'aurora' ? auroraPathOffsets : null
@@ -2995,7 +2998,7 @@ function App() {
               supportsGradient={false}
             />
             <CustomColorPicker
-              label={selectedPattern === 'aurora' ? 'Base Line' : 'Line'}
+              label={selectedPattern === 'aurora' ? 'Base' : 'Line'}
               color={fillColor}
               onChange={setFillColor}
               supportsGradient={true}

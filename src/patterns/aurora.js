@@ -7,6 +7,8 @@ export const generateAurora = (settings, seed = Math.random()) => {
     height, 
     color = '#4DFFDF',      // Primary color (cyan/turquoise)
     color2 = '#FF1493',     // Secondary color (magenta/pink)
+    colorData = null,       // Gradient data for base color
+    color2Data = null,      // Gradient data for halo color
     opacity = 1.0,
     dotDensity = 150,       // Number of base circles along the path
     flowAmplitude = 80,     // Wave amplitude (for generated path)
@@ -23,7 +25,7 @@ export const generateAurora = (settings, seed = Math.random()) => {
   // Create seeded random function
   const random = seededRandom(seed * 4294967296);
   
-  // Parse colors to RGB for gradient
+  // Parse colors to RGB
   const hexToRgb = (hex) => {
     const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
     return result ? {
@@ -33,8 +35,72 @@ export const generateAurora = (settings, seed = Math.random()) => {
     } : { r: 77, g: 255, b: 223 };
   };
   
-  const color1RGB = hexToRgb(color);
-  const color2RGB = hexToRgb(color2);
+  // Helper function to get color from gradient data or solid color
+  const getColorAtPosition = (colorData, fallbackHex, x, y) => {
+    if (!colorData || colorData.type === 'solid') {
+      return hexToRgb(colorData?.value ? `#${colorData.value}` : fallbackHex);
+    }
+    
+    // Calculate position in gradient space (0-1)
+    let gradientPosition = 0;
+    
+    if (colorData.type === 'linear') {
+      // Calculate position along gradient angle
+      const angle = (colorData.angle || 90) * Math.PI / 180;
+      const centerX = width / 2;
+      const centerY = height / 2;
+      const dx = x - centerX;
+      const dy = y - centerY;
+      const maxDist = Math.sqrt(width * width + height * height) / 2;
+      const dotProduct = (dx * Math.cos(angle) + dy * Math.sin(angle)) / maxDist;
+      gradientPosition = (dotProduct + 1) / 2; // Normalize to 0-1
+    } else if (colorData.type === 'radial') {
+      // Calculate distance from center
+      const centerX = width / 2;
+      const centerY = height / 2;
+      const dx = x - centerX;
+      const dy = y - centerY;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      const maxDist = Math.max(width, height) / 2;
+      gradientPosition = Math.min(1, dist / maxDist);
+    }
+    
+    // Clamp position to 0-1
+    gradientPosition = Math.max(0, Math.min(1, gradientPosition)) * 100;
+    
+    // Find the two stops to interpolate between
+    const stops = colorData.stops || [];
+    if (stops.length === 0) return hexToRgb(fallbackHex);
+    if (stops.length === 1) return hexToRgb(`#${stops[0].color}`);
+    
+    // Find surrounding stops
+    let stop1 = stops[0];
+    let stop2 = stops[stops.length - 1];
+    
+    for (let i = 0; i < stops.length - 1; i++) {
+      if (gradientPosition >= stops[i].position && gradientPosition <= stops[i + 1].position) {
+        stop1 = stops[i];
+        stop2 = stops[i + 1];
+        break;
+      }
+    }
+    
+    // Interpolate between stops
+    const range = stop2.position - stop1.position;
+    const t = range > 0 ? (gradientPosition - stop1.position) / range : 0;
+    
+    const rgb1 = hexToRgb(`#${stop1.color}`);
+    const rgb2 = hexToRgb(`#${stop2.color}`);
+    
+    return {
+      r: Math.round(rgb1.r * (1 - t) + rgb2.r * t),
+      g: Math.round(rgb1.g * (1 - t) + rgb2.g * t),
+      b: Math.round(rgb1.b * (1 - t) + rgb2.b * t)
+    };
+  };
+  
+  const color1RGB = getColorAtPosition(colorData, color, width / 2, height / 2);
+  const color2RGB = getColorAtPosition(color2Data, color2, width / 2, height / 2);
   
   // Simple noise function for organic turbulence
   const noise = (x, y) => {
@@ -201,12 +267,6 @@ export const generateAurora = (settings, seed = Math.random()) => {
     // Base circle size
     const baseCircleSize = 2 + random() * 2;
     
-    // Color gradient along the path
-    const r = Math.round(color1RGB.r * (1 - t) + color2RGB.r * t);
-    const g = Math.round(color1RGB.g * (1 - t) + color2RGB.g * t);
-    const b = Math.round(color1RGB.b * (1 - t) + color2RGB.b * t);
-    const baseColor = `rgb(${r},${g},${b})`;
-    
     // Edge taper for overall opacity
     const edgeTaper = Math.sin(t * Math.PI);
     
@@ -235,12 +295,25 @@ export const generateAurora = (settings, seed = Math.random()) => {
       
       // Only add visible circles
       if (finalOpacity > 0.05) {
-        // Slightly lighter color as we go up
-        const lightenFactor = stackProgress * 0.2;
-        const lightR = Math.min(255, Math.round(r + (255 - r) * lightenFactor));
-        const lightG = Math.min(255, Math.round(g + (255 - g) * lightenFactor));
-        const lightB = Math.min(255, Math.round(b + (255 - b) * lightenFactor));
-        const circleColor = `rgb(${lightR},${lightG},${lightB})`;
+        // Color logic: Base color for base line (stackIndex = 0), Halo color for stacked circles above
+        let r, g, b;
+        if (stackIndex === 0) {
+          // Use base color (color) for the base line - calculate at this circle's position
+          const baseColorAtPos = getColorAtPosition(colorData, color, x, y);
+          r = baseColorAtPos.r;
+          g = baseColorAtPos.g;
+          b = baseColorAtPos.b;
+        } else {
+          // Use halo color (color2) for stacked circles - calculate at this circle's position
+          const haloColorAtPos = getColorAtPosition(color2Data, color2, x, y);
+          // Apply slight lightening as we go up
+          const lightenFactor = stackProgress * 0.2;
+          r = Math.min(255, Math.round(haloColorAtPos.r + (255 - haloColorAtPos.r) * lightenFactor));
+          g = Math.min(255, Math.round(haloColorAtPos.g + (255 - haloColorAtPos.g) * lightenFactor));
+          b = Math.min(255, Math.round(haloColorAtPos.b + (255 - haloColorAtPos.b) * lightenFactor));
+        }
+        
+        const circleColor = `rgb(${r},${g},${b})`;
         
         dotsData.push({
           x,
